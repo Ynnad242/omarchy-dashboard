@@ -151,7 +151,8 @@ Item {
   // ---- Email ------------------------------------------------------------------
   property string mailProvider: "gmail"
   readonly property var mailHelp: ({
-    gmail: { name: "Gmail", url: "https://myaccount.google.com/apppasswords", steps: "Turn on 2-Step Verification, then create an app password named Jarvis. Paste the 16 letters below." },
+    gmail: { name: "Gmail", url: "https://myaccount.google.com/apppasswords", first: "https://myaccount.google.com/signinoptions/twosv",
+             steps: "Turn on 2-Step Verification first (Google hides app passwords until you do), then create an app password named Jarvis and paste the 16 letters below. Work or school accounts may not allow this." },
     icloud: { name: "iCloud", url: "https://account.apple.com/account/manage", steps: "Sign-In and Security → App-Specific Passwords → create one named Jarvis." },
     yahoo: { name: "Yahoo", url: "https://login.yahoo.com/account/security", steps: "Account security → Generate app password → name it Jarvis." },
     fastmail: { name: "Fastmail", url: "https://app.fastmail.com/settings/security/apps", steps: "Settings → Privacy & Security → Manage app passwords → New, with IMAP access." },
@@ -233,6 +234,12 @@ Item {
             t: pane.t
             text: "1. " + pane.mailHelp[pane.mailProvider].steps
             color: pane.t.textDim
+          }
+          Link {
+            t: pane.t
+            visible: !!pane.mailHelp[pane.mailProvider].first
+            text: "Turn on 2-Step Verification  ↗"
+            url: pane.mailHelp[pane.mailProvider].first || ""
           }
           Link {
             t: pane.t
