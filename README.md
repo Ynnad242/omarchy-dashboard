@@ -1,5 +1,7 @@
 # Jarvis
 
+**[Install](#install)** · [Optional setup](#optional-setup) · [Keys](#use) · [Privacy](#privacy)
+
 A home screen for [Omarchy](https://omarchy.org) that lives on workspace 1:
 screen time, tasks, live stocks, weather, Govee lamps and air purifier,
 Discord, an exercise coach that nudges you off doomscrolling, and a bar along
@@ -28,24 +30,59 @@ isn't linked yet") and the calendar (only tasks show on Today).
 
 ## Install
 
+You need [Omarchy](https://omarchy.org) (a recent version, with the Lua
+Hyprland config). Everything else Jarvis needs, `python3` included, comes with
+Omarchy.
+
+**1. Add the plugin.** Open a terminal (Super+Enter) and run:
+
 ```bash
 omarchy plugin add https://github.com/Ynnad242/omarchy-dashboard --enable
 ```
 
-Jarvis opens as a normal window. To keep it on workspace 1 and add a shortcut,
-put these in `~/.config/hypr/looknfeel.lua` and `~/.config/hypr/bindings.lua`
-(any free key works; Super+Shift+J is free on a stock Omarchy):
+Omarchy asks you to confirm, since this is code from outside Omarchy; answer
+yes. Jarvis opens as a window straight away.
+
+**2. Keep it on workspace 1.** Open your look-and-feel config:
+
+```bash
+nano ~/.config/hypr/looknfeel.lua
+```
+
+Add this line at the bottom, save (Ctrl+O, Enter) and exit (Ctrl+X):
 
 ```lua
--- looknfeel.lua: Jarvis always opens on workspace 1, without stealing focus.
 o.window({ class = "^org.quickshell$", title = "^Jarvis$" }, { workspace = "1 silent" })
+```
 
--- bindings.lua: jump to Jarvis (and reopen it if it was closed).
+**3. Add a shortcut** (optional, but handy if you ever close the window). Open
+your key bindings:
+
+```bash
+nano ~/.config/hypr/bindings.lua
+```
+
+Add this line at the bottom, then save and exit:
+
+```lua
 o.bind("SUPER + SHIFT + J", "Jarvis", [[omarchy-shell shell summon ynnad.jarvis '{}']])
 ```
 
-Needs Omarchy with the Lua Hyprland config and `python3` (standard library
-only). It uses the Adwaita Sans font when installed, and falls back otherwise.
+Super+Shift+J is free on a stock Omarchy; use any free key you like. Hyprland
+picks up both changes as soon as you save.
+
+**4. Restart the shell** so Jarvis reopens with the new rules:
+
+```bash
+omarchy restart shell
+```
+
+**5. Open it.** Go to workspace 1 (Super+1), or press Super+Shift+J. Then open
+Settings (press 4) to set your name, pick a style and choose which online
+services Jarvis may use.
+
+That's it. Cards for things you haven't set up yet (lamps, Claude, Discord)
+say what's missing; the next section shows how to add them.
 
 ## Optional setup
 
@@ -105,6 +142,26 @@ switch for every online service. Under Style, **Presets** are the nine built-in
 looks and **Yours** holds themes you save: pick a preset, change any colors,
 then "Save current" (or "Save as theme" on the Colors card) to switch back to it
 any time. Saved themes stay on your computer.
+
+## Update
+
+```bash
+omarchy plugin update ynnad.jarvis
+omarchy restart shell
+```
+
+## Uninstall
+
+```bash
+omarchy plugin remove ynnad.jarvis
+```
+
+Then delete the two lines you added to `looknfeel.lua` and `bindings.lua`. To
+remove your Jarvis data too (tasks, screen time, settings):
+
+```bash
+rm -rf ~/.local/state/jarvis ~/.config/jarvis
+```
 
 ## Privacy
 
