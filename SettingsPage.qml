@@ -302,15 +302,6 @@ Item {
         width: 3; height: parent.height
         color: mini.c("accent", mini.p.accent || page.t.themeAccent)
       }
-      Canvas {
-        visible: mini.styleKey === "ynnad"
-        anchors.fill: parent
-        onPaint: {
-          var ctx = getContext("2d"); ctx.reset()
-          ctx.fillStyle = "#ef233c"
-          ctx.beginPath(); ctx.moveTo(width * 0.62, height); ctx.lineTo(width, height * 0.35); ctx.lineTo(width, height); ctx.closePath(); ctx.fill()
-        }
-      }
       Rectangle {
         x: page.t.px(8); y: mini.styleKey === "y2k" ? parent.height * 0.32 : page.t.px(8)
         width: parent.width * 0.4; height: page.t.px(4); radius: 2

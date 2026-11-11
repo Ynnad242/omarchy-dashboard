@@ -67,6 +67,10 @@ Item {
   SoftShadow { visible: card.t.neu; target: bg; radius: bg.radius; blur: card.t.px(26); dx: card.t.px(11); dy: card.t.px(11); color: card.t.shadowDark; strength: 0.9 }
   SoftShadow { visible: card.t.clay; target: bg; radius: bg.radius; blur: card.t.px(36); dx: 0; dy: card.t.px(16); color: "black"; strength: 0.8 }
   SoftShadow { visible: card.t.y2k; target: bg; radius: bg.radius; blur: card.t.px(3); dx: card.t.px(6); dy: card.t.px(6); color: "#00052e"; strength: 0.9; steps: 3 }
+  // ynnad: product-shot lighting: a wide soft shadow below, a tighter one
+  // close under the edge.
+  SoftShadow { visible: card.t.ynnad; target: bg; radius: bg.radius; blur: card.t.px(40); dx: 0; dy: card.t.px(18); color: "black"; strength: 0.9 }
+  SoftShadow { visible: card.t.ynnad; target: bg; radius: bg.radius; blur: card.t.px(10); dx: 0; dy: card.t.px(4); color: "black"; strength: 0.5 }
   SoftShadow { visible: card.t.wabi; target: bg; radius: bg.radius; blur: card.t.px(22); dx: 0; dy: card.t.px(7); color: "#3a2a1a"; strength: 0.26 }
 
   // ---- the surface --------------------------------------------------------------------
@@ -196,8 +200,7 @@ Item {
       border.color: Qt.rgba(0.23, 0.19, 0.14, 0.12)
     }
 
-    // ynnad: a studio spotlight on obsidian cards, and Racing Red cutting
-    // across a corner: a broad wedge on obsidian, a thin slash on Ice Grey.
+    // ynnad: a studio spotlight across obsidian cards
     Rectangle {
       visible: card.t.ynnad && card.t.dark
       anchors.fill: parent
@@ -208,40 +211,6 @@ Item {
         GradientStop { position: 0.6; color: Qt.rgba(1, 1, 1, 0.0) }
       }
     }
-    Canvas {
-      id: redCut
-      visible: card.t.ynnad
-      anchors.fill: parent
-      readonly property bool darkCard: card.t.dark
-      onWidthChanged: requestPaint()
-      onHeightChanged: requestPaint()
-      onDarkCardChanged: requestPaint()
-      onVisibleChanged: requestPaint()
-      onPaint: {
-        var ctx = getContext("2d")
-        ctx.reset()
-        if (!visible) return
-        var w = width, h = height
-        var g = ctx.createLinearGradient(w, h, w * 0.6, h * 0.4)
-        g.addColorStop(0, "#ef233c")
-        g.addColorStop(1, "#a50f22")
-        ctx.fillStyle = g
-        ctx.beginPath()
-        if (darkCard) {
-          // A wedge rising from the bottom-right corner, kept small enough
-          // to stay clear of the card's content.
-          var d = Math.min(w * 0.2, h * 0.42, card.t.px(96))
-          ctx.moveTo(w - d * 1.2, h); ctx.lineTo(w, h - d); ctx.lineTo(w, h)
-        } else {
-          // A small corner flag, top-right, clear of the header text.
-          var e = card.t.px(22)
-          ctx.moveTo(w - e, 0); ctx.lineTo(w, 0); ctx.lineTo(w, e)
-        }
-        ctx.closePath()
-        ctx.fill()
-      }
-    }
-
     // discord: an embed's colored bar down the left edge
     Rectangle {
       visible: card.t.discord

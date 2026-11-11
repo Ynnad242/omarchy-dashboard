@@ -12,8 +12,8 @@ inside the Omarchy shell as the `ynnad.jarvis` plugin.
 | ![Tasks](docs/tasks.png) | ![Stocks](docs/stocks.png) | ![Settings](docs/settings.png) |
 
 Ten styles, switchable in Settings, with your own colors on top: flat, glass,
-neumorphism, claymorphism, Y2K, Swiss, wabi-sabi, Ynnad (obsidian, ice grey
-and racing red), **Omarchy** (matches your desktop: your Omarchy theme's
+neumorphism, claymorphism, Y2K, Swiss, wabi-sabi, Ynnad (obsidian and ice grey
+cards with soft studio shadows), **Omarchy** (matches your desktop: your Omarchy theme's
 colors, font, corners and wallpaper, and follows theme changes) and
 **Discord** (Discord's dark theme, embeds and all).
 
