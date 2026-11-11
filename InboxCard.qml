@@ -8,11 +8,11 @@ GlassCard {
 
   property var mails: []
   property string emptyText: ""
+  signal opened()
 
   title: "Important email"
   icon: ""
   iconColor: t.yellow
-  action: "Gmail"
 
   headerExtra: [
     Rectangle {
@@ -134,6 +134,7 @@ GlassCard {
           }
 
           HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
+          TapHandler { onTapped: card.opened() }
         }
       }
     }

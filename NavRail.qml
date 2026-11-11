@@ -35,10 +35,17 @@ Item {
     border.color: rail.t.border
   }
 
+  function slotOf(i) {
+    var n = 0
+    for (var k = 0; k < i && k < items.length; k++) if (!items[k].hidden) n++
+    return n
+  }
+
   Rectangle {
     id: highlight
     x: rail.t.px(6)
-    y: rail.t.px(6) + rail.current * (rail.btn + col.spacing)
+    // Hidden pages take no slot, so count only the shown ones above.
+    y: rail.t.px(6) + rail.slotOf(rail.current) * (rail.btn + col.spacing)
     width: rail.btn
     height: rail.btn
     radius: width / 2
@@ -67,6 +74,7 @@ Item {
         id: it
         required property var modelData
         required property int index
+        visible: !it.modelData.hidden
         width: rail.btn
         height: rail.btn
         Accessible.role: Accessible.PageTab

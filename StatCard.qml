@@ -74,6 +74,17 @@ GlassCard {
       color: (stat.model.delta || 0) === 0 ? stat.t.textFaint : good ? stat.t.green : stat.t.red
     }
 
+    // A short note under the number, when there's no change to show.
+    JText {
+      visible: !!stat.model.note && stat.model.delta === undefined && stat.ticker.length === 0
+      anchors.left: parent.left
+      anchors.bottom: parent.bottom
+      t: stat.t
+      text: stat.model.note || ""
+      size: 11
+      color: stat.t.yellow
+    }
+
     // Watchlist ticker
     Item {
       visible: stat.ticker.length > 0

@@ -1,11 +1,11 @@
 # Jarvis
 
-**[Install](#install)** · [Optional setup](#optional-setup) · [Keys](#use) · [Privacy](#privacy)
+**[Install](#install)** · [Set it up](#set-it-up) · [Keys](#use) · [Privacy](#privacy)
 
 A home screen for [Omarchy](https://omarchy.org) that lives on workspace 1:
-screen time, tasks, live stocks, weather, Govee lamps and air purifier,
-Discord, an exercise coach that nudges you off doomscrolling, and a bar along
-the bottom for asking Claude, by typing or by voice. It runs
+screen time, tasks, live stocks, weather, your email, Govee lamps and air
+purifier, Discord, an exercise coach that nudges you off doomscrolling, and a
+bar along the bottom for asking Claude or Codex, by typing or by voice. It runs
 inside the Omarchy shell as the `ynnad.jarvis` plugin.
 
 ![Jarvis home screen](docs/home-flat.png)
@@ -23,106 +23,69 @@ theme changes) and **Discord** (Discord's dark theme, embeds and all).
 
 ![Jarvis in the Y2K style](docs/home-y2k.png)
 
-Screenshots use made-up demo data.
-
-**Not finished yet**, and labeled as such on screen: the email card ("Gmail
-isn't linked yet") and the calendar (only tasks show on Today).
+Screenshots use made-up demo data. **Not finished yet**, and labeled as such
+on screen: the calendar (only tasks show on Today).
 
 ## Install
 
-You need [Omarchy](https://omarchy.org) (a recent version, with the Lua
-Hyprland config). Everything else Jarvis needs, `python3` included, comes with
-Omarchy.
-
-**1. Add the plugin.** Open a terminal (Super+Enter) and run:
+You need [Omarchy](https://omarchy.org); everything else Jarvis uses comes with
+it. Open a terminal (Super+Enter) and run:
 
 ```bash
 omarchy plugin add https://github.com/Ynnad242/omarchy-dashboard --enable
 ```
 
 Omarchy asks you to confirm, since this is code from outside Omarchy; answer
-yes. Jarvis opens as a window straight away.
+yes. Jarvis opens and moves itself to workspace 1, where it stays. Press
+**Super+1** to get to it.
 
-**2. Keep it on workspace 1.** Open your look-and-feel config:
+That's the only command. Everything else is in Jarvis's Settings (press **4**).
 
-```bash
-nano ~/.config/hypr/looknfeel.lua
-```
+## Set it up
 
-Add this line at the bottom, save (Ctrl+O, Enter) and exit (Ctrl+X):
+Nothing here needs a terminal or a config file: you sign in, or click Allow.
+Cards for things you haven't set up yet say what's missing and where to go.
 
-```lua
-o.window({ class = "^org.quickshell$", title = "^Jarvis$" }, { workspace = "1 silent" })
-```
+**Settings → General**
+- Your name, 12- or 24-hour clock, the exercise coach.
+- **Shortcut**: one click adds Super+Shift+J to jump to Jarvis from anywhere
+  (only if that key is free on your computer).
+- **Online services**: a switch for each one Jarvis talks to (see Privacy).
 
-**3. Add a shortcut** (optional, but handy if you ever close the window). Open
-your key bindings:
+**Settings → Accounts**
+- **AI assistant**: pick Claude or Codex and click *Sign in*. Omarchy's own
+  sign-in opens (it may open your browser); Jarvis notices when you're done.
+  Claude runs with every tool switched off, so it can only answer; Codex runs
+  read-only in an empty folder. For voice, Jarvis uses Omarchy's dictation tool
+  (Voxtype); if it isn't installed yet, clicking the mic opens its installer.
+- **Email**: pick Gmail, iCloud, Yahoo, Fastmail or Other, follow the link to
+  make an app password, and sign in with your address and that password. It's
+  checked with your mail server, then kept in your system keyring. Read-only:
+  Jarvis never marks mail as read, moves or sends anything. (Outlook and
+  Hotmail only allow Microsoft's own sign-in, so they aren't supported yet.)
+- **Govee**: lamps are found on your network automatically. If none show up,
+  turn on *LAN Control* for each light in the Govee Home app, then click
+  *Allow lamps through the firewall* (asks for your password once). For the air
+  purifier, paste the free API key from the Govee Home app (Profile → Settings
+  → Apply for API Key); it's checked with Govee before it's saved.
 
-```bash
-nano ~/.config/hypr/bindings.lua
-```
+**Settings → Dashboard**: switch off any card you don't want, and the rest of
+Home fills the space. No Govee devices? Switch off *Home*. Don't follow
+stocks? Switch off the watchlist and the Stocks page. Hidden cards also stop
+their background work.
 
-Add this line at the bottom, then save and exit:
+**Settings → Look**: the nine styles, your own colors, and themes you save.
 
-```lua
-o.bind("SUPER + SHIFT + J", "Jarvis", [[omarchy-shell shell summon ynnad.jarvis '{}']])
-```
-
-Super+Shift+J is free on a stock Omarchy; use any free key you like. Hyprland
-picks up both changes as soon as you save.
-
-**4. Restart the shell** so Jarvis reopens with the new rules:
-
-```bash
-omarchy restart shell
-```
-
-**5. Open it.** Go to workspace 1 (Super+1), or press Super+Shift+J. Then open
-Settings (press 4) to set your name, pick a style and choose which online
-services Jarvis may use.
-
-That's it. Cards for things you haven't set up yet (lamps, Claude, Discord)
-say what's missing; the next section shows how to add them.
-
-## Optional setup
-
-Everything below is optional; cards without their source say what's missing.
-
-**Govee lamps** (local network, no account)
-1. In the Govee Home app, turn on *LAN Control* for each light.
-2. Allow the lights' replies through Omarchy's firewall:
-   ```bash
-   sudo ufw allow from 192.168.1.0/24 to any port 4002 proto udp comment 'Govee LAN'
-   ```
-   (Use your own network's range if it isn't `192.168.1.x`.)
-3. Keep the lamp's own switch on; turn it on and off from Jarvis.
-
-**Govee air purifier** (Govee cloud): get a free API key in the Govee Home app
-(Profile → Settings → Apply for API Key) and save it, readable only by you:
-```bash
-mkdir -p ~/.config/jarvis && printf '{"apiKey": "YOUR-KEY"}\n' > ~/.config/jarvis/govee.json && chmod 600 ~/.config/jarvis/govee.json
-```
-
-**Discord**: pings and DMs come from Discord's desktop notifications (Discord →
+**Discord** pings and DMs come from Discord's desktop notifications (Discord →
 User Settings → Notifications → Enable Desktop Notifications). The live voice
 strip needs the [ynnad.discord-stream](https://github.com/Ynnad242/omarchy-discord-overlay)
-overlay, which shares its voice state with Jarvis; that overlay also hides its
-floating widgets while Jarvis is on screen.
-
-**Ask Claude** (typing or voice): needs [Claude Code](https://claude.com/claude-code)
-installed and signed in once (run `claude`); Jarvis uses that login, so there's
-no API key to set up. Claude runs with every tool switched off, so it can only
-answer, not act. For voice, install Omarchy's dictation tool:
-```bash
-omarchy install dictation voxtype
-```
-Speech is turned into text on your computer; the recording is kept in memory
-and deleted straight after.
+overlay, which shares its voice state with Jarvis and hides its floating
+widgets while Jarvis is on screen.
 
 **Exercise coach**: on by default. After 15 minutes on YouTube, TikTok,
 Instagram, Reddit, X, Facebook, Twitch or Snapchat you get one notification and
-a short upper-body set to do; nothing is ever locked. Change or switch it off
-in Settings, or edit the site and app lists in `~/.config/jarvis/coach.json`.
+a short upper-body set to do; nothing is ever locked. When you've done it, hold
+*Done* and it goes away.
 
 ## Use
 
@@ -131,17 +94,16 @@ in Settings, or edit the site and app lists in `~/.config/jarvis/coach.json`.
 | Super+1, or your shortcut | Go to Jarvis |
 | 1 2 3 4 | Home, Tasks, Stocks, Settings |
 | Esc | Back to Home |
-| / | Type a question for Claude |
+| / | Type a question for the assistant |
 | V | Ask by voice (press again to send) |
 | T | Add a task |
 | S | Search stocks |
 | Tab, Space, arrows | Move between and change controls in Settings |
 
-Settings has the style, colors, your name, the clock, the exercise coach, and a
-switch for every online service. Under Style, **Presets** are the nine built-in
-looks and **Yours** holds themes you save: pick a preset, change any colors,
-then "Save current" (or "Save as theme" on the Colors card) to switch back to it
-any time. Saved themes stay on your computer.
+Under Settings → Look, **Presets** are the nine built-in looks and **Yours**
+holds themes you save: pick a preset, change any colors, then "Save current" (or
+"Save as theme" on the Colors card) to switch back to it any time. Saved themes
+stay on your computer.
 
 ## Update
 
@@ -156,8 +118,10 @@ omarchy restart shell
 omarchy plugin remove ynnad.jarvis
 ```
 
-Then delete the two lines you added to `looknfeel.lua` and `bindings.lua`. To
-remove your Jarvis data too (tasks, screen time, settings):
+If you added the shortcut, delete the Jarvis line at the end of
+`~/.config/hypr/bindings.lua`. To remove your Jarvis data too (tasks, screen
+time, settings), sign out of email under Settings → Accounts first (that clears
+its keyring entry), then:
 
 ```bash
 rm -rf ~/.local/state/jarvis ~/.config/jarvis
@@ -179,6 +143,7 @@ online services below.
 | `~/.local/state/jarvis/weather.json`, `home.json` | Caches of the last weather and lamp/purifier state |
 | `~/.config/jarvis/settings.json`, `look.json`, `coach.json`, `stocks.json` | Your settings, style, saved themes and watchlist |
 | `~/.config/jarvis/govee.json` | Your Govee API key (readable only by you) |
+| `~/.config/jarvis/mail.json` | Your email address and mail server (readable only by you); the password is in the system keyring, not here |
 
 Screen time records the focused app's name. For browsers it records only which
 known site the tab is on (YouTube, GitHub, ...), not page titles; Steam games
@@ -191,8 +156,8 @@ are recorded by their window title, which is the game's name.
   through `$XDG_RUNTIME_DIR/discord-voice.json` (memory only).
 - CPU, memory and disk usage from `/proc` and `df`.
 
-**Online services** (only while workspace 1 is on screen, and Claude only when
-you ask it something; each can be switched off in Settings)
+**Online services** (only while workspace 1 is on screen, and the AI assistant
+only when you ask it something; each can be switched off in Settings)
 
 | Service | Sent | Why |
 |---|---|---|
@@ -200,9 +165,10 @@ you ask it something; each can be switched off in Settings)
 | Open-Meteo (`api.open-meteo.com`) | Rough coordinates | Weather. |
 | geo.omarchy.org | Your IP address (as with any request) | Your rough location, if none is saved in Omarchy's weather settings. Same source as Omarchy's weather panel. |
 | Govee cloud (`openapi.api.govee.com`) | Your API key, device IDs, commands | The air purifier. Lamps use the local network only. |
-| Anthropic, through Claude Code | Your question, the last few turns of the chat, and a short summary of the dashboard (your name, open tasks, today's screen time and top apps, weather, watchlist prices) | Answers in the bar along the bottom. Only when you ask something. Your Claude Code account's terms apply. |
+| Your mail server (e.g. `imap.gmail.com`) | Your address and app password, over TLS | Unread email, read-only. Only after you sign in. |
+| Anthropic (Claude) or OpenAI (Codex), through their command-line tools | Your question, the last few turns of the chat, and a short summary of the dashboard (your name, open tasks, today's screen time and top apps, weather, watchlist prices) | Answers in the bar along the bottom. Only when you ask something. Your account's terms apply. |
 
-**Delete your data**: Settings → Privacy & data → hold "Erase" removes screen
+**Delete your data**: Settings → General → hold "Erase" removes screen
 time, coach history and caches. To remove everything, delete
 `~/.local/state/jarvis` and `~/.config/jarvis`.
 

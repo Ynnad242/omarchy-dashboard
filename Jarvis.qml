@@ -6,7 +6,7 @@ import qs.Commons
 import "MockData.js" as Mock
 
 // Jarvis: a home-screen app that lives on workspace 1. The shell starts it,
-// a Hyprland rule puts its window on workspace 1, and it stays there.
+// it keeps its own window on workspace 1 (no Hyprland rule needed), and it stays there.
 // `omarchy-shell shell summon ynnad.jarvis` (Super+Shift+J) jumps to it,
 // and reopens it if it was closed.
 //
@@ -102,10 +102,20 @@ Item {
   }
   onBriefingChanged: if (!briefingTimer.running && root.briefingTyped.length > 0) root.briefingTyped = root.briefing
 
+  // ---- what's on the dashboard (Settings > Dashboard) -------------------------
+  // settings.hidden lists the cards someone switched off; demo shows them all.
+  readonly property var hiddenCards: root.demo ? [] : (Array.isArray(root.settings.hidden) ? root.settings.hidden : [])
+  function shows(key) { return root.hiddenCards.indexOf(key) < 0 }
+  function setShown(key, on) {
+    var h = root.hiddenCards.filter(function(k) { return k !== key })
+    if (!on) h.push(key)
+    root.setSetting("hidden", h)
+    if (key === "stocksPage" && !on && root.page === 2) root.page = 0
+  }
   readonly property var pages: [
     { label: "Home", icon: "" },
     { label: "Tasks", icon: "" },
-    { label: "Stocks", icon: "\uf201" },
+    { label: "Stocks", icon: "\uf201", hidden: !root.shows("stocksPage") },
     { label: "Settings", icon: "\uf013" }
   ]
 
@@ -139,6 +149,32 @@ Item {
     path: Quickshell.env("XDG_RUNTIME_DIR") + "/jarvis-onscreen"
     printErrors: false
   }
+  // Keep the window on workspace 1 by itself, so nobody has to add a Hyprland
+  // rule. It looks for its own window (class org.quickshell, title Jarvis)
+  // and moves it there quietly if it's anywhere else. Off in Settings for
+  // anyone who wants it somewhere else.
+  function homeWindow() {
+    var list = Hyprland.toplevels ? Hyprland.toplevels.values : []
+    for (var i = 0; i < list.length; i++) {
+      var w = list[i], ipc = w.lastIpcObject || {}
+      if (w.title === "Jarvis" && (ipc.class === undefined || ipc.class === "org.quickshell")) return w
+    }
+    return null
+  }
+  Timer {
+    interval: 1500
+    repeat: true
+    running: win.visible && !root.demo && root.settings.pinWorkspace !== false
+    triggeredOnStart: true
+    onTriggered: {
+      var w = root.homeWindow()
+      if (!w || !w.workspace || w.workspace.id === 1 || !w.address) return
+      var address = String(w.address)
+      if (address.indexOf("0x") !== 0) address = "0x" + address
+      Hyprland.dispatch('hl.dsp.window.move({ workspace = "1", follow = false, window = "address:' + address + '" })')
+    }
+  }
+
   function announce() { onScreenFile.setText(root.onScreen ? "1\n" : "0\n") }
   Timer { interval: 0; running: true; onTriggered: root.announce() }
   Component.onDestruction: onScreenFile.setText("0\n")
@@ -149,6 +185,175 @@ Item {
     Qt.callLater(function() { root.live = true })
   }
 
+  // ---- Accounts (Settings > Accounts) -----------------------------------------
+  // Everything here is set up by signing in or allowing something, never by
+  // editing files: AI sign-in uses Omarchy's own account manager, email keeps
+  // its app password in the system keyring, the Govee key is checked before
+  // it's saved, and the firewall rule asks for your password through polkit.
+  function script(name) { return Qt.resolvedUrl(name).toString().replace(/^(file|qs):\/\//, "") }
+
+  // Which assistant answers in the bar: "claude", "codex" or "off".
+  readonly property string aiProvider: root.settings.ai ? root.settings.ai : (root.settings.claude === false ? "off" : "claude")
+
+  // Claude and Codex accounts, from `omarchy agent account list`.
+  property var agents: ({ claude: { installed: false, signedIn: false }, codex: { installed: false, signedIn: false }, checked: false })
+  property bool agentsBusy: false
+  property real signingInUntil: 0
+  Process {
+    id: agentsProc
+    command: ["sh", "-c", "command -v claude >/dev/null && echo HAS:claude; command -v codex >/dev/null && echo HAS:codex; " +
+                          "command -v omarchy >/dev/null && omarchy agent account list --json 2>/dev/null | tr -d '\\n'; echo"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var out = String(text), a = { claude: { installed: /HAS:claude/.test(out), signedIn: false },
+                                      codex: { installed: /HAS:codex/.test(out), signedIn: false }, checked: true }
+        var j = out.indexOf("[")
+        if (j >= 0) {
+          try {
+            var list = JSON.parse(out.slice(j))
+            for (var i = 0; i < list.length; i++) {
+              var p = list[i], acc = (p.accounts || []).filter(function(x) { return x.active }) [0] || (p.accounts || [])[0]
+              if (a[p.provider] && acc) {
+                a[p.provider].signedIn = acc.signedIn === true
+                a[p.provider].plan = acc.plan || ""
+                a[p.provider].email = acc.email || ""
+              }
+            }
+          } catch (e) {}
+        }
+        root.agents = a
+        root.agentsBusy = false
+      }
+    }
+  }
+  function checkAgents() { if (!agentsProc.running) { root.agentsBusy = true; agentsProc.running = true } }
+  // Opens Omarchy's sign-in in a small terminal; we look again every few
+  // seconds until it's done (or three minutes pass).
+  function signInAgent(provider) {
+    Quickshell.execDetached(["omarchy-launch-floating-terminal-with-presentation", "omarchy agent account add " + provider])
+    root.signingInUntil = Date.now() + 180000
+  }
+  Timer {
+    interval: 4000; repeat: true
+    running: root.signingInUntil > 0
+    onTriggered: {
+      if (Date.now() > root.signingInUntil) { root.signingInUntil = 0; return }
+      root.checkAgents()
+    }
+  }
+
+  // Email (mail.py): read-only IMAP; the password lives in the keyring.
+  property var mail: ({ status: "off" })
+  property var mailLogin: ({ busy: false, ok: false, error: "" })
+  Process {
+    id: mailProc
+    command: ["setpriv", "--pdeathsig", "TERM", "python3", "-I", root.script("mail.py"), "serve"]
+    running: root.onScreen && !root.demo && root.shows("mail") && root.settings.mail !== false
+    stdinEnabled: true
+    stdout: SplitParser { onRead: function(line) { try { var m = JSON.parse(line); if (m.type === "mail") root.mail = m } catch (e) {} } }
+  }
+  Process {
+    id: mailLoginProc
+    command: ["python3", "-I", root.script("mail.py"), "login"]
+    stdinEnabled: true
+    stdout: SplitParser {
+      onRead: function(line) {
+        try {
+          var m = JSON.parse(line)
+          root.mailLogin = { busy: false, ok: m.ok === true, error: m.error || "" }
+          if (m.ok && mailProc.running) mailProc.write("refresh\n")
+        } catch (e) {}
+      }
+    }
+    onExited: if (root.mailLogin.busy) root.mailLogin = { busy: false, ok: false, error: "sign-in stopped unexpectedly" }
+  }
+  function signInMail(req) {
+    if (mailLoginProc.running) return
+    root.mailLogin = { busy: true, ok: false, error: "" }
+    mailLoginProc.running = true
+    mailLoginProc.write(JSON.stringify(req) + "\n")
+  }
+  Process {
+    id: mailLogoutProc
+    command: ["python3", "-I", root.script("mail.py"), "logout"]
+    onExited: { root.mail = { status: "off" }; root.mailLogin = { busy: false, ok: false, error: "" } }
+  }
+  function signOutMail() { mailLogoutProc.running = true }
+  // The inbox in the browser once email is set up; Settings > Accounts before.
+  function openMail() {
+    if (root.mail.status === "ok" && root.mail.web) Qt.openUrlExternally(root.mail.web)
+    else root.openAccounts()
+  }
+  function openAccounts() { root.page = 3; settingsPage.tab = "accounts" }
+  // Rows for the inbox card.
+  readonly property var mailRows: (root.mail.mails || []).map(function(m) {
+    return { from: m.from, subject: m.subject, snippet: m.snippet, time: root.relTime(m.ts), needsReply: m.needsReply, unread: true }
+  })
+
+  // Govee: save the API key from Settings (checked with Govee first).
+  property var goveeKey: ({ busy: false, ok: false, error: "" })
+  Process {
+    id: goveeKeyProc
+    command: ["python3", "-I", root.script("govee.py"), "setkey"]
+    stdinEnabled: true
+    stdout: SplitParser {
+      onRead: function(line) {
+        try {
+          var m = JSON.parse(line)
+          root.goveeKey = { busy: false, ok: m.ok === true, error: m.error || "" }
+          if (m.ok) root.restartGovee()
+        } catch (e) {}
+      }
+    }
+  }
+  function saveGoveeKey(key) {
+    if (goveeKeyProc.running) return
+    root.goveeKey = { busy: true, ok: false, error: "" }
+    goveeKeyProc.running = true
+    goveeKeyProc.write(JSON.stringify({ apiKey: String(key || "").trim() }) + "\n")
+  }
+  Process { id: goveeClearProc; command: ["python3", "-I", root.script("govee.py"), "clearkey"]; onExited: { root.goveeKey = { busy: false, ok: false, error: "" }; root.restartGovee() } }
+  function clearGoveeKey() { goveeClearProc.running = true }
+  function restartGovee() { if (govee.running) { govee.running = false; Qt.callLater(function() { govee.running = root.onScreen && root.shows("home") }) } }
+
+  // Let the lamps' replies through the firewall: one ufw rule for the local
+  // network, after the usual Omarchy password prompt.
+  property var lampsAllow: ({ busy: false, ok: false, error: "", range: "" })
+  Process {
+    id: lanRangeProc
+    command: ["python3", "-I", root.script("govee.py"), "lan-range"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var r = ""
+        try { r = JSON.parse(text).range || "" } catch (e) {}
+        if (!r) { root.lampsAllow = { busy: false, ok: false, error: "couldn't tell which network you're on", range: "" }; return }
+        root.lampsAllow = { busy: true, ok: false, error: "", range: r }
+        ufwProc.command = ["pkexec", "ufw", "allow", "from", r, "to", "any", "port", "4002", "proto", "udp", "comment", "Govee LAN (Jarvis)"]
+        ufwProc.running = true
+      }
+    }
+  }
+  Process {
+    id: ufwProc
+    stderr: StdioCollector { id: ufwErr }
+    onExited: function(code) {
+      var r = root.lampsAllow.range
+      root.lampsAllow = code === 0 ? { busy: false, ok: true, error: "", range: r }
+        : { busy: false, ok: false, range: r, error: code === 126 || code === 127 ? "permission wasn't given" : (String(ufwErr.text).trim().split("\n").pop() || "ufw failed (" + code + ")") }
+      if (code === 0) root.restartGovee()
+    }
+  }
+  function allowLamps() { if (!lanRangeProc.running && !ufwProc.running) { root.lampsAllow = { busy: true, ok: false, error: "", range: "" }; lanRangeProc.running = true } }
+
+  // Super+Shift+J, added to bindings.lua only when asked (and only if free).
+  property var shortcut: ({ added: false, taken: false, checked: false, error: "" })
+  Process {
+    id: shortcutProc
+    stdout: StdioCollector { onStreamFinished: { try { var m = JSON.parse(text); m.checked = true; m.error = m.error || ""; root.shortcut = m } catch (e) {} } }
+  }
+  function checkShortcut() { if (!shortcutProc.running) { shortcutProc.command = ["python3", "-I", root.script("setup.py"), "shortcut-status"]; shortcutProc.running = true } }
+  function addShortcut() { if (!shortcutProc.running) { shortcutProc.command = ["python3", "-I", root.script("setup.py"), "shortcut-add"]; shortcutProc.running = true } }
+
   // ---- Govee lamps + air purifier (govee.py) -----------------------------------
   property var home: ({ lights: [], purifiers: [], cloud: "off", error: "" })
   function homeSend(c) { if (govee.running) govee.write(JSON.stringify(c) + "\n") }
@@ -156,7 +361,7 @@ Item {
     id: govee
     command: ["setpriv", "--pdeathsig", "TERM", "python3", "-I",
       Qt.resolvedUrl("govee.py").toString().replace(/^(file|qs):\/\//, ""), "serve"]
-    running: root.onScreen
+    running: root.onScreen && root.shows("home")
     stdinEnabled: true
     // Settings can switch the purifier's cloud connection off.
     environment: ({ JARVIS_GOVEE_CLOUD: root.settings.goveeCloud === false ? "0" : "1" })
@@ -277,7 +482,7 @@ Item {
     id: stocksProc
     command: ["setpriv", "--pdeathsig", "TERM", "python3", "-I",
       Qt.resolvedUrl("stocks.py").toString().replace(/^(file|qs):\/\//, ""), "serve"]
-    running: root.onScreen && root.watchReady && root.settings.stocks !== false
+    running: root.onScreen && root.watchReady && root.settings.stocks !== false && (root.shows("stocksPage") || root.shows("stat-stocks"))
     stdinEnabled: true
     onRunningChanged: if (running) Qt.callLater(function() { root.sendWatch(); root.requestChart() })
     stdout: SplitParser { onRead: function(line) { root.handleStocks(line) } }
@@ -317,6 +522,7 @@ Item {
   }
 
   // The Home stat card shows the real watchlist once quotes arrive.
+  readonly property var kpiList: root.stats.filter(function(s) { return s && root.shows("stat-" + s.key) })
   readonly property var stats: {
     root.todoRev
     screenTime.rev
@@ -333,7 +539,12 @@ Item {
     for (var k = 6; k >= 0; k--) spark.push(root.doneOn(root.isoDay(-k)))
     s[1] = { key: "tasks", title: "Done today", icon: "\uf0ae", tone: "green", kind: "fraction", value: doneToday,
              total: doneToday + dueToday, delta: doneToday - doneYday, deltaLabel: "vs yesterday", spark: spark }
-    s[2] = { key: "inbox", title: "Gmail", icon: "\uf0e0", tone: "yellow", kind: "text", text: "Not linked", value: 0, spark: [] }
+    var mailNeeds = (root.mail.mails || []).filter(function(m) { return m.needsReply }).length
+    s[2] = root.mail.status === "ok"
+      ? { key: "inbox", title: "Unread email", icon: "\uf0e0", tone: "yellow", kind: "count", value: root.mail.unread || 0, spark: [],
+          note: mailNeeds ? mailNeeds + (mailNeeds === 1 ? " needs a reply" : " need a reply") : "" }
+      : { key: "inbox", title: "Email", icon: "\uf0e0", tone: "yellow", kind: "text", value: 0, spark: [],
+          text: root.mail.status === "off" ? "Not set up" : "Can't connect" }
     var rows = [], sum = 0
     for (var i = 0; i < root.watchlist.length; i++) {
       var q = root.quotes[root.watchlist[i]]
@@ -451,6 +662,11 @@ Item {
     onOpenRequested: root.open("{}")
   }
   // `omarchy-shell shell call ynnad.jarvis setPage 2` opens a page from scripts.
+  // `... call ynnad.jarvis settingsTab accounts` opens Settings on that tab.
+  function settingsTab(name) {
+    if (["general", "accounts", "dashboard", "look"].indexOf(String(name)) < 0) return "unknown tab"
+    root.page = 3; settingsPage.tab = String(name); return String(name)
+  }
   function setPage(p) { var n = parseInt(p); if (n >= 0 && n < root.pages.length) root.page = n; return String(root.page) }
   function testCoach() { doomCoach.testTrigger(); return "ok" }
   function testCoachClear() { doomCoach.testClear(); return "ok" }
@@ -512,7 +728,7 @@ Item {
   }
   function demoReply(q) {
     var s = String(q).toLowerCase()
-    var tail = "\n\n(Answered from the data on this computer: Claude is switched off in Settings.)"
+    var tail = "\n\n(Answered from the data on this computer: no assistant is switched on in Settings \u2192 Accounts.)"
     if (/screen|time|hours|app/.test(s)) {
       var top = screenTime.topApps(3).map(function(a) { return a.name + " " + Math.round(a.minutes) + "m" })
       return "Screen time today: " + Math.round(screenTime.minutesToday()) + " min" + (top.length ? ", mostly " + top.join(", ") : "") + "." + tail
@@ -643,7 +859,7 @@ Item {
           chat.focusInput()
           event.accepted = true
         } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_4) {
-          root.page = event.key - Qt.Key_1
+          if (!root.pages[event.key - Qt.Key_1].hidden) root.page = event.key - Qt.Key_1
           event.accepted = true
         } else if (event.key === Qt.Key_T) {
           if (root.page === 1) tasksPage.focusInput()
@@ -653,7 +869,7 @@ Item {
           if (root.page !== 0) root.page = 0
           chat.toggleVoice()
           event.accepted = true
-        } else if (event.key === Qt.Key_S) {
+        } else if (event.key === Qt.Key_S && root.shows("stocksPage")) {
           root.page = 2
           Qt.callLater(function() { stocksPage.focusSearch() })
           event.accepted = true
@@ -697,11 +913,16 @@ Item {
 
         readonly property real gap: theme.px(18)
         readonly property real headerH: theme.px(96)
-        readonly property real kpiH: theme.px(132)
+        readonly property bool kpiOn: root.kpiList.length > 0
+        readonly property bool midOn: root.shows("screentime") || root.shows("today")
+        readonly property bool lowOn: lower.keys.length > 0
+        readonly property real kpiH: kpiOn ? theme.px(132) : 0
         readonly property real chatH: theme.px(58)
-        readonly property real rest: height - headerH - kpiH - chatH - gap * 4
-        readonly property real mainH: Math.round(rest * 0.5)
-        readonly property real lowerH: rest - mainH
+        // Hidden rows give their space (and their gap) to the rest.
+        readonly property real rest: height - headerH - kpiH - chatH
+                                     - gap * (2 + (kpiOn && (midOn || lowOn) ? 1 : 0) + (midOn && lowOn ? 1 : 0))
+        readonly property real mainH: midOn ? (lowOn ? Math.round(rest * 0.5) : rest) : 0
+        readonly property real lowerH: lowOn ? rest - mainH : 0
         readonly property real pageY: headerH + gap
         readonly property real pageH: height - headerH - chatH - gap * 2
 
@@ -884,19 +1105,23 @@ Item {
           width: parent.width
           height: pageArea.kpiH
           spacing: pageArea.gap
-          readonly property real cardW: (width - spacing * 3) / 4
+          readonly property real cardW: (width - spacing * (root.kpiList.length - 1)) / Math.max(1, root.kpiList.length)
           Repeater {
-            model: 4
+            model: root.kpiList.length
             StatCard {
               required property int index
-              readonly property var modelData: root.stats[index]
+              readonly property var modelData: root.kpiList[index] || ({})
               t: theme
               model: modelData
               width: kpis.cardW
               height: kpis.height
               shown: root.homeShown
               order: 1 + index
-              onClicked: { if (modelData.key === "tasks") root.page = 1; else if (modelData.key === "stocks") root.page = 2 }
+              onClicked: {
+                if (modelData.key === "tasks") root.page = 1
+                else if (modelData.key === "stocks") root.page = 2
+                else if (modelData.key === "inbox") root.openMail()
+              }
             }
           }
         }
@@ -904,8 +1129,9 @@ Item {
         ScreenTimeCard {
           id: chart
           t: theme
-          y: kpis.y + kpis.height + pageArea.gap
-          width: Math.round((pageArea.width - pageArea.gap) * 0.66)
+          visible: root.shows("screentime") && opacity > 0.001
+          y: kpis.y + kpis.height + (pageArea.kpiOn ? pageArea.gap : 0)
+          width: root.shows("today") ? Math.round((pageArea.width - pageArea.gap) * 0.66) : pageArea.width
           height: pageArea.mainH
           chartData: root.demo ? root.dash.chart : screenTime.chart()
           range: root.range
@@ -915,7 +1141,8 @@ Item {
         }
         TodayCard {
           t: theme
-          x: chart.width + pageArea.gap
+          visible: root.shows("today") && opacity > 0.001
+          x: chart.visible ? chart.width + pageArea.gap : 0
           y: chart.y
           width: pageArea.width - x
           height: pageArea.mainH
@@ -927,27 +1154,48 @@ Item {
 
         Item {
           id: lower
-          y: chart.y + chart.height + pageArea.gap
+          y: chart.y + (pageArea.midOn ? chart.height + pageArea.gap : 0)
           width: parent.width
           height: pageArea.lowerH
-          readonly property var weights: [1.2, 1.0, 1.0, 1.05, 0.75]
-          readonly property real unit: (width - pageArea.gap * 4) / (1.2 + 1.0 + 1.0 + 1.05 + 0.75)
+          // Shown cards share the row by weight, left to right.
+          readonly property var weights: ({ mail: 1.2, discord: 1.0, todo: 1.0, home: 1.05, system: 0.75 })
+          readonly property var keys: ["mail", "discord", "todo", "home", "system"].filter(function(k) { return root.shows(k) })
+          readonly property real unit: {
+            var w = 0
+            for (var i = 0; i < keys.length; i++) w += weights[keys[i]]
+            return (width - pageArea.gap * Math.max(0, keys.length - 1)) / Math.max(0.01, w)
+          }
+          function wOf(k) { var i = keys.indexOf(k); return i < 0 ? 0 : i === keys.length - 1 ? width - xOf(k) : unit * weights[k] }
+          function xOf(k) {
+            var x = 0
+            for (var i = 0; i < keys.length && keys[i] !== k; i++) x += unit * weights[keys[i]] + pageArea.gap
+            return x
+          }
 
           InboxCard {
             id: inbox
             t: theme
-            width: lower.unit * lower.weights[0]
+            visible: root.shows("mail") && opacity > 0.001
+            x: lower.xOf("mail")
+            width: lower.wOf("mail")
             height: lower.height
-            mails: root.demo ? root.dash.inbox : []
-            emptyText: "Gmail isn't linked yet.\nImportant email will show up here."
+            mails: root.demo ? root.dash.inbox : root.mailRows
+            action: root.demo ? "Gmail" : root.mail.status === "ok" ? (root.mail.providerName || "Open") : "Set up"
+            onActionClicked: root.openMail()
+            onOpened: root.openMail()
+            emptyText: root.mail.status === "ok" ? "Nothing unread that needs you.\nNice."
+                     : root.mail.status === "off" || !root.mail.status ? "Email isn't set up yet.\nSign in under Settings \u2192 Accounts."
+                     : root.mail.status === "nopassword" ? "Your email password is missing.\nSign in again under Settings \u2192 Accounts."
+                     : "Can't check email: " + (root.mail.error || "unknown error") + "."
             shown: root.homeShown
             order: 7
           }
           DiscordCard {
             id: discordCard
             t: theme
-            x: inbox.x + inbox.width + pageArea.gap
-            width: lower.unit * lower.weights[1]
+            visible: root.shows("discord") && opacity > 0.001
+            x: lower.xOf("discord")
+            width: lower.wOf("discord")
             height: lower.height
             discord: root.demo ? root.dash.discord : ({ voice: root.discordVoice, mentions: root.discordPings.map(function(p) {
               return { from: p.from, where: p.where, dm: p.dm, text: p.text, time: root.relTime(p.ts) } }) })
@@ -957,8 +1205,9 @@ Item {
           TodoCard {
             id: todoCard
             t: theme
-            x: discordCard.x + discordCard.width + pageArea.gap
-            width: lower.unit * lower.weights[2]
+            visible: root.shows("todo") && opacity > 0.001
+            x: lower.xOf("todo")
+            width: lower.wOf("todo")
             height: lower.height
             todos: todoModel
             dueLabel: function(iso) { return root.dueLabel(iso) }
@@ -974,8 +1223,9 @@ Item {
           HomeCard {
             id: homeCard
             t: theme
-            x: todoCard.x + todoCard.width + pageArea.gap
-            width: lower.unit * lower.weights[3]
+            visible: root.shows("home") && opacity > 0.001
+            x: lower.xOf("home")
+            width: lower.wOf("home")
             height: lower.height
             home: root.demo ? root.demoHome : root.home
             send: function(c) { root.homeSend(c) }
@@ -984,8 +1234,9 @@ Item {
           }
           SystemCard {
             t: theme
-            x: homeCard.x + homeCard.width + pageArea.gap
-            width: lower.width - x
+            visible: root.shows("system") && opacity > 0.001
+            x: lower.xOf("system")
+            width: lower.wOf("system")
             height: lower.height
             system: root.demo ? root.dash.system : ({ cpu: root.sys.cpu, ram: root.sys.ram, disk: root.sys.disk, mouse: null })
             shown: root.homeShown
@@ -1054,6 +1305,7 @@ Item {
           settings: root.demo ? ({}) : root.settings
           coach: doomCoach
           defaultName: root.defaultName
+          app: root
           onSetSetting: function(k, v) { root.setSetting(k, v) }
           onEraseData: root.eraseData()
         }
@@ -1069,7 +1321,7 @@ Item {
           order: 12
           replyFor: function(q) { return root.demoReply(q) }
           contextFor: function() { return root.claudeContext() }
-          claudeOn: root.settings.claude !== false
+          provider: root.aiProvider
           demo: root.demo
           workDir: root.stateDir
           onEscaped: stage.forceActiveFocus()

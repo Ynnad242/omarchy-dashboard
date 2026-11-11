@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "ynnad.jarvis",
   "name": "Jarvis",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "author": "ynnad",
-  "description": "A home screen that lives on workspace 1: screen time, tasks, live stocks, weather, Govee lamps and air purifier, Discord, an exercise coach that nudges you off doomscrolling, and Claude by text or voice. Nine styles, plus your own.",
+  "description": "A home screen that lives on workspace 1: screen time, tasks, email, live stocks, weather, Govee lamps and air purifier, Discord, an exercise coach, and Claude or Codex by text or voice. Pick the cards you want; nine styles, plus your own.",
   "kinds": [
     "overlay"
   ],

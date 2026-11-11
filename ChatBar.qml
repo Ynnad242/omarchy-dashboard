@@ -9,11 +9,12 @@ import qs.Commons
 // while thinking, an input, a mic, suggestion chips, and an answer panel that
 // grows up out of the bar.
 //
-// Questions go to Claude through the `claude` command (Claude Code), using the
-// login it already has, with every tool switched off so it can only answer.
-// It gets the question, the last few turns of this chat and `contextFor()`, a
-// short summary of the dashboard. In demo mode, or with Claude switched off in
-// Settings, `replyFor` answers from local data instead.
+// Questions go to the assistant picked in Settings > Accounts, using the login
+// it already has: Claude through the `claude` command (Claude Code) with every
+// tool switched off, or Codex through `codex exec` in a read-only sandbox in an
+// empty folder. Either gets the question, the last few turns of this chat and
+// `contextFor()`, a short summary of the dashboard. In demo mode, or with the
+// assistant off, `replyFor` answers from local data instead.
 //
 // The mic records with pw-record into $XDG_RUNTIME_DIR (memory only) and turns
 // speech into text on this computer with Voxtype, Omarchy's dictation tool;
@@ -26,7 +27,9 @@ Item {
   property int order: 0
   property var replyFor: function(q) { return "" }
   property var contextFor: function() { return "" }
-  property bool claudeOn: true
+  property string provider: "claude"   // "claude" | "codex" | "off"
+  readonly property string providerName: provider === "codex" ? "Codex" : "Claude"
+  signal setupRequested()
   property bool demo: false
   property string workDir: ""
   property bool thinking: false
@@ -59,8 +62,8 @@ Item {
     typed = ""
     answer = ""
     thinking = true
-    if (bar.demo || !bar.claudeOn) { source = "local"; thinkTimer.restart() }
-    else { source = "claude"; startClaude(q) }
+    if (bar.demo || bar.provider === "off") { source = "local"; thinkTimer.restart() }
+    else { source = bar.provider; startClaude(q) }
   }
   function remember(q, a) {
     var list = turns.concat([{ q: q, a: a.slice(0, 1500) }])
@@ -85,10 +88,19 @@ Item {
   }
   function startClaude(q) {
     if (claude.running) { pendingQ = q; stopping = true; claude.running = false; return }
-    claude.command = ["claude", "-p", "--tools", "", "--strict-mcp-config", "--disable-slash-commands",
-                      "--no-session-persistence", "--setting-sources", "",
-                      "--output-format", "stream-json", "--include-partial-messages", "--verbose",
-                      "--append-system-prompt", bar.systemPrompt + bar.contextFor(), bar.promptFor(q)]
+    if (bar.provider === "codex") {
+      // Codex can't have its tools removed, so it runs read-only in an empty
+      // folder of its own and is told to answer only from what it's given.
+      // stdin is closed: codex waits for more input on a pipe otherwise.
+      var dir = Quickshell.env("XDG_RUNTIME_DIR") + "/jarvis-ai"
+      claude.command = ["sh", "-c", "mkdir -p \"$0\" && exec codex exec --sandbox read-only --skip-git-repo-check --ephemeral --json -C \"$0\" \"$1\" </dev/null", dir,
+                        bar.systemPrompt + bar.contextFor() + "\n\nDon't run commands or read files; answer only from the above.\n\n" + bar.promptFor(q)]
+    } else {
+      claude.command = ["claude", "-p", "--tools", "", "--strict-mcp-config", "--disable-slash-commands",
+                        "--no-session-persistence", "--setting-sources", "",
+                        "--output-format", "stream-json", "--include-partial-messages", "--verbose",
+                        "--append-system-prompt", bar.systemPrompt + bar.contextFor(), bar.promptFor(q)]
+    }
     stopping = false
     claude.running = true
   }
@@ -97,6 +109,11 @@ Item {
   function plain(s) {
     return String(s).replace(/\*\*(.+?)\*\*/g, "$1").replace(/__(.+?)__/g, "$1").replace(/`([^`]*)`/g, "$1")
                     .replace(/^#{1,6}\s*/gm, "").replace(/^\s*\*\s+/gm, "- ")
+  }
+  // Point at Settings when the problem is a missing sign-in.
+  function signInHint(msg) {
+    return /log ?in|sign ?in|auth|credential|api key|401|unauthori/i.test(msg)
+      ? bar.providerName + " isn't signed in. Sign in under Settings \u2192 Accounts, then ask again." : msg
   }
   function failed(msg) {
     bar.thinking = false
@@ -116,8 +133,17 @@ Item {
           bar.answer += m.event.delta.text
           bar.typed = bar.plain(bar.answer)
         } else if (m.type === "result") {
-          if (m.is_error) bar.failed("Claude couldn't answer: " + String(m.result || "unknown error").slice(0, 200))
+          if (m.is_error) bar.failed(bar.signInHint("Claude couldn't answer: " + String(m.result || "unknown error").slice(0, 200)))
           else if (!bar.answer && m.result) { bar.thinking = false; bar.answer = m.result; bar.typed = bar.plain(m.result) }
+        } else if (m.type === "item.completed" && m.item && m.item.type === "agent_message") {
+          // Codex: the whole reply arrives at once; type it in.
+          bar.thinking = false
+          bar.answer = bar.plain(String(m.item.text || ""))
+          bar.typed = ""
+          typeTimer.restart()
+        } else if (m.type === "turn.failed" || m.type === "error") {
+          var msg = (m.error && m.error.message) || m.message || "unknown error"
+          bar.failed(bar.signInHint("Codex couldn't answer: " + String(msg).slice(0, 200)))
         }
       }
     }
@@ -128,8 +154,8 @@ Item {
       if (bar.thinking || !bar.answer) {
         var err = String(claudeErr.text || "").trim().split("\n").pop()
         bar.failed(code === 127 || /not found|No such file/.test(err)
-          ? "Claude Code isn't installed, so Jarvis can't ask Claude. Install it (claude.com/claude-code), sign in once with `claude`, then try again."
-          : "Claude couldn't answer" + (err ? ": " + err.slice(0, 200) : " (exit " + code + ")."))
+          ? bar.providerName + " isn't installed on this computer. Pick another assistant under Settings \u2192 Accounts."
+          : bar.signInHint(bar.providerName + " couldn't answer" + (err ? ": " + err.slice(0, 200) : " (exit " + code + ").")))
       }
     }
   }
@@ -142,17 +168,27 @@ Item {
   property real voiceStart: 0
   property int voiceSecs: 0
   readonly property string voiceFile: Quickshell.env("XDG_RUNTIME_DIR") + "/jarvis-voice.wav"
+  property real voiceCheckUntil: 0
   Process {
+    id: voiceCheck
     running: true
     command: ["sh", "-c", "command -v pw-record >/dev/null && command -v voxtype >/dev/null"]
-    onExited: function(code) { bar.voiceReady = code === 0 }
+    onExited: function(code) { bar.voiceReady = code === 0; if (bar.voiceReady) bar.voiceCheckUntil = 0 }
+  }
+  Timer {
+    interval: 5000; repeat: true
+    running: bar.voiceCheckUntil > 0
+    onTriggered: { if (Date.now() > bar.voiceCheckUntil) bar.voiceCheckUntil = 0; else if (!voiceCheck.running) voiceCheck.running = true }
   }
   function toggleVoice() {
     if (voiceState === "listening") { stopVoice(); return }
     if (voiceState === "transcribing") return
     if (!voiceReady) {
+      // Open Omarchy's installer for its dictation tool, then notice when it's there.
+      Quickshell.execDetached(["omarchy-launch-floating-terminal-with-presentation", "omarchy install dictation voxtype"])
+      voiceCheckUntil = Date.now() + 600000
       question = ""
-      failed("Voice input needs Omarchy's dictation tool. Install it with: omarchy install dictation voxtype")
+      failed("Voice needs Omarchy's dictation tool, so its installer just opened. Once it's done, click the mic again.")
       return
     }
     stopClaude(); thinkTimer.stop(); typeTimer.stop()
@@ -267,7 +303,7 @@ Item {
         t: bar.t
         width: parent.width
         visible: bar.question.length > 0
-        text: "You  ·  " + bar.question + (bar.source === "claude" ? "      Claude" : "")
+        text: "You  ·  " + bar.question + (bar.source === "claude" ? "      Claude" : bar.source === "codex" ? "      Codex" : "")
         size: 10.5
         color: bar.t.textFaint
       }
@@ -522,7 +558,7 @@ Item {
         }
       }
       Rectangle { width: 1; height: bar.t.px(20); color: bar.t.inkA(0.08) }
-      JText { t: bar.t; height: bar.t.px(20); text: String.fromCodePoint(0xF0674) + (bar.claudeOn && !bar.demo ? " Claude" : " Local"); size: 10.5; color: bar.t.accent }
+      JText { t: bar.t; height: bar.t.px(20); text: String.fromCodePoint(0xF0674) + (!bar.demo && bar.provider !== "off" ? " " + bar.providerName : " Local"); size: 10.5; color: bar.t.accent }
     }
 
     TapHandler { onTapped: input.forceActiveFocus() }

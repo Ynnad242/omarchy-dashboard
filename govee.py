@@ -29,6 +29,7 @@ Every state line looks like:
 import json
 import math
 import os
+import re
 import select
 import socket
 import sys
@@ -466,12 +467,78 @@ def cloud_once():
     print(json.dumps({"cloud": cloud.status, "error": cloud.error, "purifiers": list(cloud.purifiers.values())}, indent=2))
 
 
+def set_key():
+    """Save an API key from Settings: {"apiKey": "..."} on stdin. The key is
+    checked against Govee first and only saved (readable only by you) if it
+    works, so a typo can't break the purifier quietly."""
+    try:
+        key = str(json.loads(sys.stdin.readline() or "{}").get("apiKey") or "").strip()
+    except ValueError:
+        key = ""
+    if not re.match(r"^[A-Za-z0-9-]{8,80}$", key):
+        print(json.dumps({"type": "setkey", "ok": False, "error": "that doesn't look like a Govee API key"}))
+        return
+    cloud = Cloud(key)
+    cloud.refresh()
+    if cloud.status != "ok":
+        print(json.dumps({"type": "setkey", "ok": False, "error": cloud.error or "Govee didn't accept that key"}))
+        return
+    os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
+    cfg = load_config()
+    cfg["apiKey"] = key
+    tmp = CONFIG + ".tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(cfg, f, indent=2)
+        f.write("\n")
+    os.replace(tmp, CONFIG)
+    print(json.dumps({"type": "setkey", "ok": True, "purifiers": len(cloud.purifiers)}))
+
+
+def clear_key():
+    cfg = load_config()
+    cfg.pop("apiKey", None)
+    try:
+        if cfg:
+            with open(CONFIG, "w") as f:
+                json.dump(cfg, f, indent=2)
+        else:
+            os.remove(CONFIG)
+    except OSError:
+        pass
+    print(json.dumps({"type": "clearkey", "ok": True}))
+
+
+def lan_range():
+    """The local network the lamps sit on (e.g. 192.168.1.0/24), for the
+    firewall rule Settings offers to add."""
+    import ipaddress
+    import subprocess
+    try:
+        route = subprocess.run(["ip", "-4", "route", "show", "default"], capture_output=True, text=True, timeout=5).stdout.split()
+        dev = route[route.index("dev") + 1]
+        for line in subprocess.run(["ip", "-4", "-o", "addr", "show", "dev", dev], capture_output=True, text=True, timeout=5).stdout.splitlines():
+            net = ipaddress.ip_interface(line.split()[3]).network
+            if net.is_private:
+                print(json.dumps({"type": "lan", "range": str(net)}))
+                return
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+        pass
+    print(json.dumps({"type": "lan", "range": ""}))
+
+
 if __name__ == "__main__":
     what = sys.argv[1] if len(sys.argv) > 1 else "serve"
     if what == "scan":
         scan_once()
     elif what == "cloud":
         cloud_once()
+    elif what == "setkey":
+        set_key()
+    elif what == "clearkey":
+        clear_key()
+    elif what == "lan-range":
+        lan_range()
     else:
         try:
             serve()

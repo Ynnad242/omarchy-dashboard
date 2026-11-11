@@ -1,7 +1,11 @@
 import QtQuick
 import qs.Commons
 
-// Settings: general options, privacy and data, the style, and colors.
+// Settings, in four tabs:
+//   General    name, clock, window, the exercise coach, online services, data
+//   Accounts   AI assistant, email and Govee sign-ins (SettingsAccounts.qml)
+//   Dashboard  which cards are on Home (SettingsDashboard.qml)
+//   Look       style and colors
 // Style and colors save to ~/.config/jarvis/look.json through the theme;
 // everything else goes out through signals to Jarvis.qml, which saves it.
 Item {
@@ -12,11 +16,49 @@ Item {
   property var settings: ({})
   property var coach: null
   property string defaultName: ""
+  property var app                       // Jarvis.qml, for accounts and the dashboard
+  property string tab: "general"
 
   signal setSetting(string key, var value)
   signal eraseData()
+  onShownChanged: if (shown && app && !app.demo) app.checkShortcut()
 
   readonly property real gap: t.px(18)
+  readonly property real tabsH: t.px(34)
+  readonly property real bodyY: tabsH + gap
+  readonly property real bodyH: height - bodyY
+
+  Segmented {
+    id: tabs
+    t: page.t
+    slotW: page.t.px(96)
+    options: [{ key: "general", label: "General" }, { key: "accounts", label: "Accounts" },
+              { key: "dashboard", label: "Dashboard" }, { key: "look", label: "Look" }]
+    current: page.tab
+    onPicked: function(k) { page.tab = k }
+    opacity: page.shown ? 1 : 0
+    visible: opacity > 0.001
+    Behavior on opacity { NumberAnimation { duration: Style.duration(160) } }
+  }
+
+  SettingsAccounts {
+    t: page.t
+    app: page.app
+    visible: page.tab === "accounts"
+    shown: page.shown && page.tab === "accounts"
+    y: page.bodyY
+    width: page.width
+    height: page.bodyH
+  }
+  SettingsDashboard {
+    t: page.t
+    app: page.app
+    visible: page.tab === "dashboard"
+    shown: page.shown && page.tab === "dashboard"
+    y: page.bodyY
+    width: page.width
+    height: page.bodyH
+  }
 
   // ---- small parts ----------------------------------------------------------------------
   component Row2: Item {
@@ -97,11 +139,12 @@ Item {
   GlassCard {
     id: general
     t: page.t
-    shown: page.shown
+    shown: page.shown && page.tab === "general"
     order: 1
     hoverable: false
-    width: Math.round((page.width - page.gap) * 0.38)
-    height: Math.round((page.height - page.gap) * 0.46)
+    y: page.bodyY
+    width: Math.round((page.width - page.gap) * 0.5)
+    height: page.bodyH
     title: "General"
 
     Column {
@@ -133,6 +176,24 @@ Item {
         JToggle { t: page.t; on: page.settings.seconds !== false; Accessible.name: "Show seconds"; onFlipped: function(v) { page.setSetting("seconds", v) } }
       }
       Row2 {
+        label: "Keep Jarvis on workspace 1"
+        hint: "Moves its window back there if it ends up somewhere else"
+        JToggle { t: page.t; on: page.settings.pinWorkspace !== false; Accessible.name: "Keep Jarvis on workspace 1"; onFlipped: function(v) { page.setSetting("pinWorkspace", v) } }
+      }
+      Row2 {
+        label: "Shortcut"
+        hint: !page.app ? "" : page.app.shortcut.added ? "Super+Shift+J jumps to Jarvis (and reopens it if closed)"
+            : page.app.shortcut.error ? page.app.shortcut.error
+            : page.app.shortcut.taken ? "Super+Shift+J already does something else here; Super+1 still works"
+            : "Add Super+Shift+J to jump to Jarvis from anywhere"
+        SButton {
+          t: page.t
+          label: page.app && page.app.shortcut.added ? "Added  ✓" : "Add"
+          enabled: !!page.app && page.app.shortcut.checked && !page.app.shortcut.added && !page.app.shortcut.taken && !page.app.demo
+          onClicked: page.app.addShortcut()
+        }
+      }
+      Row2 {
         label: "Exercise coach"
         hint: "A short set after too much scrolling"
         JToggle { t: page.t; on: page.coach ? page.coach.enabled : true; Accessible.name: "Exercise coach"; onFlipped: function(v) { if (page.coach) page.coach.setOption("enabled", v) } }
@@ -154,13 +215,14 @@ Item {
   GlassCard {
     id: privacy
     t: page.t
-    shown: page.shown
-    order: 3
+    shown: page.shown && page.tab === "general"
+    order: 2
     hoverable: false
-    y: general.height + page.gap
-    width: general.width
-    height: page.height - y
-    title: "Privacy & data"
+    x: general.width + page.gap
+    y: page.bodyY
+    width: page.width - x
+    height: page.bodyH
+    title: "Online services and your data"
 
     Flickable {
       anchors.fill: parent
@@ -178,7 +240,7 @@ Item {
           width: parent.width
           wrapMode: Text.Wrap
           elide: Text.ElideNone
-          text: "Everything Jarvis records stays on this computer, in ~/.local/state/jarvis and ~/.config/jarvis. These online services are only asked for data while workspace 1 is on screen, and Claude only when you ask it something:"
+          text: "Everything Jarvis records stays on this computer, in ~/.local/state/jarvis and ~/.config/jarvis. These online services are only asked for data while workspace 1 is on screen, and the AI assistant only when you ask it something:"
           size: 11.5
           color: page.t.textDim
           lineHeight: 1.2
@@ -200,9 +262,14 @@ Item {
           JToggle { t: page.t; on: page.settings.goveeCloud !== false; Accessible.name: "Air purifier through Govee cloud"; onFlipped: function(v) { page.setSetting("goveeCloud", v) } }
         }
         Row2 {
-          label: "Ask Claude"
-          hint: "Anthropic, via Claude Code: your question, this chat, a dashboard summary"
-          JToggle { t: page.t; on: page.settings.claude !== false; Accessible.name: "Answer questions with Claude"; onFlipped: function(v) { page.setSetting("claude", v) } }
+          label: "Email"
+          hint: "Your mail server, read-only, once you sign in under Accounts"
+          JToggle { t: page.t; on: page.settings.mail !== false; Accessible.name: "Check email"; onFlipped: function(v) { page.setSetting("mail", v) } }
+        }
+        Row2 {
+          label: "AI assistant"
+          hint: "Claude or Codex, only when you ask something: your question, this chat, a dashboard summary"
+          SButton { t: page.t; label: page.app && page.app.aiProvider !== "off" ? (page.app.aiProvider === "codex" ? "Codex" : "Claude") + "  ›" : "Off  ›"; onClicked: page.tab = "accounts" }
         }
         Item { width: 1; height: page.t.px(6) }
 
@@ -265,7 +332,7 @@ Item {
   }
 
   // ---- Style -----------------------------------------------------------------------------
-  // Presets: the seven built-in styles. Yours: themes you saved (a style plus
+  // Presets: the nine built-in styles. Yours: themes you saved (a style plus
   // your colors), and a tile to save what you have now. Kept in look.json.
   property string styleTab: "presets"
   property bool naming: false
@@ -323,12 +390,14 @@ Item {
   GlassCard {
     id: styleCard
     t: page.t
-    shown: page.shown
-    order: 2
+    shown: page.shown && page.tab === "look"
+    order: 1
     hoverable: false
-    x: general.width + page.gap
-    width: page.width - x
-    height: Math.round((page.height - page.gap) * 0.46)
+    y: page.bodyY
+    width: page.width
+    // Just tall enough for one row of tiles (more when many themes are saved).
+    height: Math.round(page.styleTab === "mine" && mine.rows > 1 ? (page.bodyH - page.gap) * 0.55
+                       : Math.min((page.bodyH - page.gap) * 0.55, tiles.tileH + page.t.px(120)))
     title: "Style"
 
     headerExtra: [
@@ -346,10 +415,10 @@ Item {
       id: tiles
       visible: page.styleTab === "presets"
       width: parent.width
-      columns: 5
+      columns: 9
       spacing: page.t.px(14)
       readonly property real tileW: (width - spacing * (columns - 1)) / columns
-      readonly property real tileH: Math.max(page.t.px(60), (parent.height - spacing - page.t.px(44)) / 2)
+      readonly property real tileH: Math.max(page.t.px(60), tileW * 0.62)
 
       Repeater {
         model: page.t.styles
@@ -389,10 +458,13 @@ Item {
       id: mine
       visible: page.styleTab === "mine"
       width: parent.width
-      columns: 5
+      columns: 9
       spacing: page.t.px(14)
       readonly property real tileW: tiles.tileW
-      readonly property real tileH: tiles.tileH
+      // More than a row of saved themes: shrink the tiles to fit them all.
+      readonly property int rows: Math.ceil((page.t.saved.length + 1) / columns)
+      readonly property real tileH: rows <= 1 ? tiles.tileH
+        : Math.max(page.t.px(40), (parent.height - page.t.px(26) * rows - spacing * (rows - 1)) / rows)
 
       // Save what's on screen now.
       Item {
@@ -585,12 +657,11 @@ Item {
   GlassCard {
     id: colors
     t: page.t
-    shown: page.shown
-    order: 4
+    shown: page.shown && page.tab === "look"
+    order: 2
     hoverable: false
-    x: styleCard.x
-    y: styleCard.height + page.gap
-    width: styleCard.width
+    y: styleCard.y + styleCard.height + page.gap
+    width: page.width
     height: page.height - y
     title: "Colors"
     action: Object.keys(page.t.custom || {}).length && page.t.activeSaved < 0 ? "Save as theme" : ""
