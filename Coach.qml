@@ -17,6 +17,8 @@ Item {
 
   // ---- settings ------------------------------------------------------------
   property bool enabled: true
+  // Demo mode: no tracking, and the real state file is never read or written.
+  property bool demo: false
   property int triggerMinutes: 15      // slop minutes before a challenge
   property int remindMinutes: 15       // more slop minutes before one reminder
   property int idleSeconds: 300        // no input this long (and no video playing) pauses the meter
@@ -204,7 +206,7 @@ Item {
   Timer {
     interval: 5000
     repeat: true
-    running: true
+    running: !coach.demo
     onTriggered: coach.tick(5)
   }
 
@@ -220,6 +222,7 @@ Item {
   Timer { id: saveTimer; interval: 30000; onTriggered: coach.saveNow() }
   function saveSoon() { if (!saveTimer.running) saveTimer.start() }
   function saveNow() {
+    if (coach.demo) return
     if (!loaded) return
     saveTimer.stop()
     stateFile.setText(JSON.stringify(snapshot()) + "\n")
@@ -227,7 +230,7 @@ Item {
 
   FileView {
     id: stateFile
-    path: coach.stateDir + "/coach.json"
+    path: coach.demo ? "" : coach.stateDir + "/coach.json"
     printErrors: false
     atomicWrites: true
     onLoaded: {

@@ -14,6 +14,9 @@ GlassCard {
 
   readonly property var lights: home.lights || []
   readonly property bool lampFound: lights.length > 0
+  // After a while without an answer, say so instead of "looking" forever.
+  property bool searchedLong: false
+  Timer { interval: 10000; running: card.shown && !card.lampFound && !card.searchedLong; onTriggered: card.searchedLong = true }
   readonly property bool anyOn: { for (var i = 0; i < lights.length; i++) if (lights[i].on) return true; return false }
   readonly property var purifier: (home.purifiers || []).length ? home.purifiers[0] : null
 
@@ -254,7 +257,7 @@ GlassCard {
         width: parent.width
         height: slider.hot ? card.t.px(8) : card.t.px(6)
         radius: height / 2
-        color: Qt.rgba(1, 1, 1, slider.hot ? 0.11 : 0.08)
+        color: card.t.inkA(slider.hot ? 0.13 : 0.10)
         Behavior on height { NumberAnimation { duration: Style.duration(140); easing.type: Easing.OutCubic } }
         Behavior on color { ColorAnimation { duration: Style.duration(140) } }
 
@@ -364,7 +367,10 @@ GlassCard {
         t: card.t
         width: parent.width
         height: card.t.px(40)
-        text: "Looking for your lamps… (are they switched on?)"
+        wrapMode: Text.Wrap
+        elide: Text.ElideNone
+        text: card.searchedLong ? "No Govee lamps found on your network. Turn on LAN Control for them in the Govee Home app."
+                                : "Looking for your lamps… (are they switched on?)"
         size: 10
         color: card.t.textFaint
       }
@@ -387,6 +393,8 @@ GlassCard {
     // Whites and colors, for the lamp picked in the header (or both).
     Row {
       id: swatches
+      visible: card.lampFound
+      height: visible ? implicitHeight : 0
       anchors.top: lampList.bottom
       anchors.topMargin: card.t.px(10)
       x: card.t.px(6)
@@ -403,7 +411,7 @@ GlassCard {
           width: swatches.d; height: width; radius: width / 2
           color: modelData <= 3000 ? "#ffc58f" : modelData <= 4500 ? "#ffe4ce" : "#e8f0ff"
           border.width: active ? 2 : 1
-          border.color: active ? "white" : card.t.inkA(0.2)
+          border.color: active ? card.t.text : card.t.inkA(0.2)
           scale: sh.hovered ? 1.15 : 1
           Behavior on scale { NumberAnimation { duration: Style.duration(120); easing.type: Easing.OutCubic } }
           HoverHandler { id: sh; cursorShape: Qt.PointingHandCursor }
@@ -429,8 +437,10 @@ GlassCard {
 
     Row {
       id: sceneRow
+      visible: card.lampFound
+      height: visible ? implicitHeight : 0
       anchors.top: swatches.bottom
-      anchors.topMargin: card.t.px(9)
+      anchors.topMargin: visible ? card.t.px(9) : 0
       x: card.t.px(6)
       spacing: card.t.px(6)
       opacity: card.ease(card.progress * 1.6 - 0.25)

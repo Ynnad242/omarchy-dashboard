@@ -40,9 +40,9 @@ Item {
   }
   function timeLabel(ts, long) {
     var d = new Date(ts * 1000)
-    if (range === "1d") return Qt.formatTime(d, "h:mm AP")
-    if (range === "5d") return long ? Qt.formatDateTime(d, "ddd h:mm AP") : Qt.formatDate(d, "ddd")
-    if (range === "1mo") return long ? Qt.formatDateTime(d, "MMM d, h AP") : Qt.formatDate(d, "MMM d")
+    if (range === "1d") return Qt.formatTime(d, t.timeFmt)
+    if (range === "5d") return long ? Qt.formatDateTime(d, "ddd " + t.timeFmt) : Qt.formatDate(d, "ddd")
+    if (range === "1mo") return long ? Qt.formatDateTime(d, t.clock24 ? "MMM d, HH:00" : "MMM d, h AP") : Qt.formatDate(d, "MMM d")
     if (range === "5y") return Qt.formatDate(d, long ? "MMM d, yyyy" : "yyyy")
     return Qt.formatDate(d, long ? "MMM d, yyyy" : "MMM d")
   }
@@ -82,6 +82,7 @@ Item {
         t: chart.t
         x: chart.width - chart.padR + chart.t.px(10)
         anchors.verticalCenter: parent.top
+        visible: chart.points.length > 1
         text: chart.money(parent.v)
         size: 9.5
         color: chart.t.textFaint

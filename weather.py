@@ -118,6 +118,7 @@ def main():
         h = int(times[i][11:13])
         hours.append({
             "label": ("12" if h % 12 == 0 else str(h % 12)) + ("a" if h < 12 else "p"),
+            "hour": h,
             "temp": round(hourly["temperature_2m"][i]),
             "icon": g,
             "rain": hourly["precipitation_probability"][i] or 0,

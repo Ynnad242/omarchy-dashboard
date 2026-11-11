@@ -19,6 +19,11 @@ QtObject {
   property real u: 1
   function px(v) { return Math.round(v * t.u) }
 
+  // Follows Settings > Clock everywhere a time is shown.
+  property bool clock24: true
+  readonly property string timeFmt: clock24 ? "HH:mm" : "h:mm AP"
+  function hourLabel(h) { return clock24 ? (h < 10 ? "0" : "") + h : (h % 12 === 0 ? "12" : String(h % 12)) + (h < 12 ? "a" : "p") }
+
   readonly property var styles: [
     { key: "flat", label: "Flat" },
     { key: "glass", label: "Glass" },

@@ -2,8 +2,8 @@ import QtQuick
 import qs.Commons
 
 // The built-in checklist. Click a row (or its box) to tick it, type in the
-// field at the bottom and press Enter to add one. Phase 1 keeps the list in
-// memory; phase 2 saves it to ~/.local/state/jarvis/todos.json.
+// field at the bottom and press Enter to add one. The list is saved to
+// ~/.local/state/jarvis/todos.json.
 GlassCard {
   id: card
 

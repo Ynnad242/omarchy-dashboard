@@ -5,8 +5,8 @@ import qs.Commons
 
 // The Jarvis bar along the bottom: an orb that breathes while idle and spins
 // while thinking, an input, suggestion chips, and an answer panel that grows
-// up out of the bar and types its reply in. Phase 1 answers from `replyFor`;
-// phase 3 swaps that for Claude.
+// up out of the bar and types its reply in. For now it answers from `replyFor`
+// (local data); Claude is not connected yet.
 Item {
   id: bar
 

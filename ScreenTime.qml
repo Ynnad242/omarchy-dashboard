@@ -108,7 +108,7 @@ Item {
     for (var b = 0; b < 12; b++) {
       var h = b * 2
       var label = h === 0 ? "12a" : h < 12 ? h + "a" : h === 12 ? "12p" : (h - 12) + "p"
-      day.push({ label: label, minutes: ((hours[h] || 0) + (hours[h + 1] || 0)) / 60 })
+      day.push({ label: label, hour: h, minutes: ((hours[h] || 0) + (hours[h + 1] || 0)) / 60 })
     }
     var weekday = (now.getDay() + 6) % 7
     var names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]

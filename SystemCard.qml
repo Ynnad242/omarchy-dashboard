@@ -36,7 +36,7 @@ GlassCard {
       color: card.t.glassInset
       InsetShade { t: card.t }
       border.width: 1
-      border.color: Qt.rgba(1, 1, 1, mh.hovered ? 0.14 : 0.06)
+      border.color: card.t.inkA(mh.hovered ? 0.14 : 0.06)
       opacity: card.ease(card.progress * 1.5 - 0.3)
 
       Rectangle {

@@ -34,7 +34,7 @@ function build(now) {
   for (var b = 0; b < 12; b++) {
     var h = b * 2
     var label = h === 0 ? "12a" : h < 12 ? h + "a" : h === 12 ? "12p" : (h - 12) + "p"
-    day.push({ label: label, minutes: b <= Math.floor(hour / 2) ? dayShape[b] : 0 })
+    day.push({ label: label, hour: h, minutes: b <= Math.floor(hour / 2) ? dayShape[b] : 0 })
   }
 
   var month = []
@@ -140,7 +140,7 @@ function briefing(d, openTodos) {
 
 function reply(q, d, openTitles) {
   var s = String(q).toLowerCase()
-  var tail = "\n\n(Preview answer from sample data. Claude gets wired in during phase 3.)"
+  var tail = "\n\n(Sample answer from demo data. Claude isn't connected yet.)"
   if (/mail|inbox|email/.test(s)) {
     var need = d.inbox.filter(function(m) { return m.needsReply })
     return "Two emails need you. " + need.map(function(m) { return m.from + ": “" + m.subject + "”" }).join(", and ") +

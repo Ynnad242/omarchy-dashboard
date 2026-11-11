@@ -11,6 +11,7 @@ Item {
   property bool shown: false
   property var watchlist: []
   property var quotes: ({})
+  property var failed: []          // symbols the last refresh had no data for
   property string selected: ""
   property string range: "1d"
   property var chart: null
@@ -18,6 +19,7 @@ Item {
   property string chartError: ""
   property var results: []
   property bool searching: false
+  property string searchError: ""
   property bool live: false
   property int every: 60
   property real lastAt: 0
@@ -151,7 +153,7 @@ Item {
         id: list
         anchors.top: searchBox.bottom
         anchors.topMargin: page.t.px(10)
-        anchors.bottom: footer.top
+        anchors.bottom: footerNote.top
         anchors.bottomMargin: page.t.px(6)
         width: parent.width
         clip: true
@@ -198,7 +200,7 @@ Item {
             anchors.top: sym.bottom
             anchors.topMargin: page.t.px(2)
             width: spark.x - x - page.t.px(8)
-            text: row.q ? row.q.name : "Loading…"
+            text: row.q ? row.q.name : page.failed.indexOf(row.modelData) >= 0 ? "No data" : "Loading…"
             size: 9.5
             color: page.t.textFaint
           }
@@ -269,12 +271,12 @@ Item {
       }
 
       JText {
-        id: footer
+        id: footerNote
         anchors.bottom: parent.bottom
         width: parent.width
         t: page.t
         text: page.error ? page.error
-          : (page.lastAt > 0 ? "Updated " + Qt.formatTime(new Date(page.lastAt * 1000), "h:mm:ss AP") + "  ·  " : "") + "Yahoo Finance (unofficial)"
+          : (page.lastAt > 0 ? "Updated " + Qt.formatTime(new Date(page.lastAt * 1000), page.t.clock24 ? "HH:mm:ss" : "h:mm:ss AP") + "  ·  " : "") + "Yahoo Finance (unofficial)"
         size: 9
         color: page.error ? page.t.red : page.t.textFaint
       }
@@ -307,7 +309,7 @@ Item {
             t: page.t
             width: parent.width
             height: page.t.px(36)
-            text: "  No matches"
+            text: page.searchError ? "  Search failed: " + page.searchError : page.searching ? "  Searching…" : "  No matches"
             size: 11
             color: page.t.textFaint
           }
@@ -421,6 +423,7 @@ Item {
           anchors.bottomMargin: page.t.px(4)
           JText {
             t: page.t
+            visible: !isNaN(chartCard.livePrice) && chartCard.basePrice > 0
             text: (chartCard.up ? "▲ " : "▼ ") + Math.abs(chartCard.chg).toFixed(2) + "  (" + page.pct(chartCard.chgPct) + ")"
             size: 12.5
             font.weight: Font.DemiBold

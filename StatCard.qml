@@ -67,7 +67,9 @@ GlassCard {
       anchors.bottom: parent.bottom
       readonly property bool good: (stat.model.delta || 0) >= 0 ? !stat.model.lowerIsBetter : !!stat.model.lowerIsBetter
       t: stat.t
-      text: ((stat.model.delta || 0) >= 0 ? "↑ " : "↓ ") + Math.abs(stat.model.delta || 0) + (stat.model.deltaUnit || "") + "  " + (stat.model.deltaLabel || "")
+      // No arrow for "no change": "Same as yesterday" rather than "↑ 0 vs yesterday".
+      text: (stat.model.delta || 0) === 0 ? "Same " + String(stat.model.deltaLabel || "").replace(/^vs /, "as ")
+        : ((stat.model.delta || 0) > 0 ? "↑ " : "↓ ") + Math.abs(stat.model.delta || 0) + (stat.model.deltaUnit || "") + "  " + (stat.model.deltaLabel || "")
       size: 11
       color: (stat.model.delta || 0) === 0 ? stat.t.textFaint : good ? stat.t.green : stat.t.red
     }

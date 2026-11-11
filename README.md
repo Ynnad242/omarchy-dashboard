@@ -23,7 +23,7 @@ theme changes) and **Discord** (Discord's dark theme, embeds and all).
 Screenshots use made-up demo data.
 
 **Not finished yet**, and labeled as such on screen: the email card ("Gmail
-isn't linked yet") and the chat bar, which answers from your local data with a
+isn't linked yet"), the calendar (only tasks show on Today) and the chat bar, which answers from your local data with a
 note that Claude isn't connected.
 
 ## Install

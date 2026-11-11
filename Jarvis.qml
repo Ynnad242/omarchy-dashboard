@@ -42,8 +42,8 @@ Item {
   readonly property bool demo: Quickshell.env("JARVIS_DEMO") === "1"
   readonly property var demoWeather: ({ type: "weather", place: "Springfield", unit: "F", temp: 64, feels: 62, humidity: 48, wind: 6,
     windUnit: "mph", label: "Partly cloudy", icon: "\ue302", day: true, high: 70, low: 51, rain: 10,
-    hours: [{ label: "5p", temp: 63, icon: "\ue302" }, { label: "6p", temp: 61, icon: "\ue302" }, { label: "7p", temp: 59, icon: "\ue37e" },
-            { label: "8p", temp: 57, icon: "\ue37e" }, { label: "9p", temp: 55, icon: "\ue379" }] })
+    hours: [{ label: "5p", hour: 17, temp: 63, icon: "\ue302" }, { label: "6p", hour: 18, temp: 61, icon: "\ue302" }, { label: "7p", hour: 19, temp: 59, icon: "\ue37e" },
+            { label: "8p", hour: 20, temp: 57, icon: "\ue37e" }, { label: "9p", hour: 21, temp: 55, icon: "\ue379" }] })
   readonly property var demoHome: ({ cloud: "ok", error: "",
     lights: [{ ip: "demo-1", name: "Desk lamp", on: true, brightness: 80, kelvin: 2700, white: true, color: [255, 166, 87] },
              { ip: "demo-2", name: "Floor lamp", on: true, brightness: 45, kelvin: 0, white: false, color: [122, 162, 247] }],
@@ -86,7 +86,7 @@ Item {
     doomCoach.doneToday = 0
     doomCoach.lastSite = ""
   }
-  // Only real things: tasks due, the weather, the calendar.
+  // Only real things: tasks due and the weather (no calendar is linked yet).
   readonly property string briefing: root.demo ? "2 tasks due today  \u00b7  64\u00b0 and partly cloudy  \u00b7  stand-up at 9:30" : realBriefing
   readonly property string realBriefing: {
     root.todoRev
@@ -98,7 +98,6 @@ Item {
     }
     var parts = [due === 0 ? "Nothing due today" : due + (due === 1 ? " task" : " tasks") + " due today"]
     if (root.weather) parts.push(root.weather.temp + "\u00b0 and " + String(root.weather.label).toLowerCase())
-    parts.push("nothing on your calendar")
     return parts.join("  \u00b7  ")
   }
   onBriefingChanged: if (!briefingTimer.running && root.briefingTyped.length > 0) root.briefingTyped = root.briefing
@@ -209,6 +208,8 @@ Item {
   property string stockRange: "1d"
   property var stockChart: null
   property string stockChartError: ""
+  property var stocksFailed: []
+  property string stockSearchError: ""
   property var stockResults: []
   property bool stockSearching: false
   property int searchId: 0
@@ -225,6 +226,7 @@ Item {
   }
   function searchStocks(q) {
     root.searchId++
+    root.stockSearchError = ""
     if (!String(q).trim()) { root.stockResults = []; root.stockSearching = false; return }
     root.stockSearching = true
     stocksSend({ cmd: "search", q: q, id: root.searchId })
@@ -258,6 +260,7 @@ Item {
       root.stocksEvery = m.every || 60
       root.stocksAt = m.at || 0
       root.stocksError = Object.keys(m.quotes).length === 0 && m.errors && m.errors.length ? "Can't reach Yahoo Finance right now" : ""
+      root.stocksFailed = (m.errors || []).map(function(e) { return String(e).split(":")[0] })
     } else if (m.type === "search") {
       if (m.id !== root.searchId) return
       root.stockResults = m.results || []
@@ -267,7 +270,7 @@ Item {
       root.stockChart = m
     } else if (m.type === "error") {
       if (m.of === "chart" && m.id === root.chartId) root.stockChartError = "Couldn't load the chart: " + m.error
-      if (m.of === "search" && m.id === root.searchId) { root.stockResults = []; root.stockSearching = false }
+      if (m.of === "search" && m.id === root.searchId) { root.stockResults = []; root.stockSearching = false; root.stockSearchError = m.error }
     }
   }
   Process {
@@ -289,7 +292,8 @@ Item {
 
   FileView {
     id: stocksFile
-    path: root.configDir + "/stocks.json"
+    // Demo mode never reads or writes the real watchlist.
+    path: root.demo ? "" : root.configDir + "/stocks.json"
     printErrors: false
     atomicWrites: true
     onLoaded: {
@@ -308,7 +312,7 @@ Item {
     }
   }
   function saveWatchlist() {
-    if (!root.watchReady) return
+    if (!root.watchReady || root.demo) return
     stocksFile.setText(JSON.stringify({ watchlist: root.watchlist }, null, 2) + "\n")
   }
 
@@ -443,6 +447,7 @@ Item {
   // ---- Coach ------------------------------------------------------------------
   Coach {
     id: doomCoach
+    demo: root.demo
     onOpenRequested: root.open("{}")
   }
   // `omarchy-shell shell call ynnad.jarvis setPage 2` opens a page from scripts.
@@ -462,6 +467,9 @@ Item {
                          created: 0, doneAt: d[i].done ? Date.now() : 0 })
     root.todosReady = true
     root.weather = root.demoWeather
+    root.watchlist = ["NVDA", "AAPL", "TSLA", "AMD", "SPY"]
+    root.stockSel = "NVDA"
+    root.watchReady = true
     root.recount()
   }
   property bool todosReady: false
@@ -476,7 +484,7 @@ Item {
         var a = JSON.parse(text())
         for (var i = 0; i < a.length && i < 1000; i++) {
           if (!a[i] || typeof a[i].title !== "string") continue
-          todoModel.append({ title: a[i].title.slice(0, 200), done: a[i].done === true, due: String(a[i].due || ""),
+          todoModel.append({ title: a[i].title.slice(0, 200), done: a[i].done === true, due: /^\d{4}-\d{2}-\d{2}$/.test(String(a[i].due || "")) ? String(a[i].due) : "",
                              created: Number(a[i].created) || 0, doneAt: Number(a[i].doneAt) || 0 })
         }
       } catch (e) { console.warn("jarvis: can't read todos.json: " + e) }
@@ -504,7 +512,7 @@ Item {
   }
   function demoReply(q) {
     var s = String(q).toLowerCase()
-    var tail = "\n\n(Demo answer from your real data. Claude gets wired in next.)"
+    var tail = "\n\n(Answered from the data on this computer. Claude isn't connected yet.)"
     if (/screen|time|hours|app/.test(s)) {
       var top = screenTime.topApps(3).map(function(a) { return a.name + " " + Math.round(a.minutes) + "m" })
       return "Screen time today: " + Math.round(screenTime.minutesToday()) + " min" + (top.length ? ", mostly " + top.join(", ") : "") + "." + tail
@@ -512,7 +520,7 @@ Item {
     var open = root.todayItems.map(function(t) { return t.title })
     return (open.length ? "Due today: " + open.join("; ") + "." : "Nothing's due today.") +
       (root.weather ? " It's " + root.weather.temp + "\u00b0 and " + String(root.weather.label).toLowerCase() + "." : "") +
-      " Your calendar is empty." + tail
+      tail
   }
   function openTodoTitles() {
     var out = []
@@ -564,7 +572,13 @@ Item {
   // ---- clock + briefing ---------------------------------------------------------
   Theme {
     id: theme
-    u: Math.max(0.6, Math.min(win.width / 1920, win.height / 1080))
+    // Scale with the window. When width is the limit (a half-width tile),
+    // shrink more gently so text stays readable; height can't give, or cards
+    // would overflow on short screens.
+    readonly property real wfit: win.width / 1920
+    readonly property real hfit: win.height / 1080
+    u: Math.max(0.6, Math.min(wfit < 1 ? Math.pow(wfit, 0.55) : wfit, hfit))
+    clock24: root.settings.clock24 !== false
   }
   Timer {
     interval: 1000
@@ -646,7 +660,7 @@ Item {
       }
 
       Item {
-        id: content
+        id: pageArea
         x: rail.x + rail.width + theme.px(28)
         y: theme.px(30)
         width: parent.width - x - theme.px(36)
@@ -666,7 +680,7 @@ Item {
         Item {
           id: header
           width: parent.width
-          height: content.headerH
+          height: pageArea.headerH
           opacity: root.live ? 1 : 0
           property real rise: root.live ? 0 : theme.px(14)
           transform: Translate { y: header.rise }
@@ -711,7 +725,7 @@ Item {
             JText {
               t: theme
               height: theme.px(22)
-              width: (weatherBlock.visible ? weatherBlock.x : content.width * 0.75) - theme.px(150)
+              width: (weatherBlock.visible ? weatherBlock.x : pageArea.width * 0.75) - theme.px(150)
               color: theme.textDim
               text: root.briefingTyped + (doomCoach.meter >= 0.5 && !doomCoach.challenge ? "   ·   scroll meter " + Math.round(doomCoach.score / 60) + "/" + doomCoach.triggerMinutes + " min" : "")
               size: 12.5
@@ -724,7 +738,7 @@ Item {
             coach: doomCoach
             anchors.top: dateLine.bottom
             anchors.topMargin: theme.px(8)
-            width: Math.min(theme.px(900), (weatherBlock.visible ? weatherBlock.x : content.width * 0.75) - theme.px(40))
+            width: Math.min(theme.px(900), (weatherBlock.visible ? weatherBlock.x : pageArea.width * 0.75) - theme.px(40))
           }
 
           Item {
@@ -796,7 +810,7 @@ Item {
                   spacing: theme.px(4)
                   opacity: root.live ? 1 : 0
                   Behavior on opacity { SequentialAnimation { PauseAnimation { duration: Style.duration(root.live ? 300 + index * 40 : 0) } NumberAnimation { duration: Style.duration(200) } } }
-                  JText { t: theme; text: modelData.label; size: 9.5; color: theme.textFaint }
+                  JText { t: theme; text: modelData.hour !== undefined ? theme.hourLabel(modelData.hour) : modelData.label; size: 9.5; color: theme.textFaint }
                   JText { t: theme; text: modelData.icon; size: 10; color: theme.textDim }
                   JText { t: theme; text: modelData.temp + "°"; size: 10 }
                 }
@@ -837,10 +851,10 @@ Item {
 
         Row {
           id: kpis
-          y: content.pageY
+          y: pageArea.pageY
           width: parent.width
-          height: content.kpiH
-          spacing: content.gap
+          height: pageArea.kpiH
+          spacing: pageArea.gap
           readonly property real cardW: (width - spacing * 3) / 4
           Repeater {
             model: 4
@@ -861,9 +875,9 @@ Item {
         ScreenTimeCard {
           id: chart
           t: theme
-          y: kpis.y + kpis.height + content.gap
-          width: Math.round((content.width - content.gap) * 0.66)
-          height: content.mainH
+          y: kpis.y + kpis.height + pageArea.gap
+          width: Math.round((pageArea.width - pageArea.gap) * 0.66)
+          height: pageArea.mainH
           chartData: root.demo ? root.dash.chart : screenTime.chart()
           range: root.range
           shown: root.homeShown
@@ -872,23 +886,23 @@ Item {
         }
         TodayCard {
           t: theme
-          x: chart.width + content.gap
+          x: chart.width + pageArea.gap
           y: chart.y
-          width: content.width - x
-          height: content.mainH
+          width: pageArea.width - x
+          height: pageArea.mainH
           items: root.demo ? root.dash.today : root.todayItems
-          calendarNote: root.demo ? "" : "Nothing on your calendar today"
+          calendarNote: root.demo ? "" : "Calendar isn't linked yet. Tasks due today show here."
           shown: root.homeShown
           order: 6
         }
 
         Item {
           id: lower
-          y: chart.y + chart.height + content.gap
+          y: chart.y + chart.height + pageArea.gap
           width: parent.width
-          height: content.lowerH
+          height: pageArea.lowerH
           readonly property var weights: [1.2, 1.0, 1.0, 1.05, 0.75]
-          readonly property real unit: (width - content.gap * 4) / (1.2 + 1.0 + 1.0 + 1.05 + 0.75)
+          readonly property real unit: (width - pageArea.gap * 4) / (1.2 + 1.0 + 1.0 + 1.05 + 0.75)
 
           InboxCard {
             id: inbox
@@ -903,7 +917,7 @@ Item {
           DiscordCard {
             id: discordCard
             t: theme
-            x: inbox.x + inbox.width + content.gap
+            x: inbox.x + inbox.width + pageArea.gap
             width: lower.unit * lower.weights[1]
             height: lower.height
             discord: root.demo ? root.dash.discord : ({ voice: root.discordVoice, mentions: root.discordPings.map(function(p) {
@@ -914,7 +928,7 @@ Item {
           TodoCard {
             id: todoCard
             t: theme
-            x: discordCard.x + discordCard.width + content.gap
+            x: discordCard.x + discordCard.width + pageArea.gap
             width: lower.unit * lower.weights[2]
             height: lower.height
             todos: todoModel
@@ -931,7 +945,7 @@ Item {
           HomeCard {
             id: homeCard
             t: theme
-            x: todoCard.x + todoCard.width + content.gap
+            x: todoCard.x + todoCard.width + pageArea.gap
             width: lower.unit * lower.weights[3]
             height: lower.height
             home: root.demo ? root.demoHome : root.home
@@ -941,7 +955,7 @@ Item {
           }
           SystemCard {
             t: theme
-            x: homeCard.x + homeCard.width + content.gap
+            x: homeCard.x + homeCard.width + pageArea.gap
             width: lower.width - x
             height: lower.height
             system: root.demo ? root.dash.system : ({ cpu: root.sys.cpu, ram: root.sys.ram, disk: root.sys.disk, mouse: null })
@@ -954,9 +968,9 @@ Item {
         TasksPage {
           id: tasksPage
           t: theme
-          y: content.pageY
+          y: pageArea.pageY
           width: parent.width
-          height: content.pageH
+          height: pageArea.pageH
           shown: root.live && root.page === 1
           todos: todoModel
           coachSets: doomCoach.doneToday
@@ -974,18 +988,20 @@ Item {
         StocksPage {
           id: stocksPage
           t: theme
-          y: content.pageY
+          y: pageArea.pageY
           width: parent.width
-          height: content.pageH
+          height: pageArea.pageH
           shown: root.live && root.page === 2
           watchlist: root.watchlist
           quotes: root.quotes
+          failed: root.stocksFailed
           selected: root.stockSel
           range: root.stockRange
           chart: root.stockChart
           chartError: root.stockChartError
           results: root.stockResults
           searching: root.stockSearching
+          searchError: root.stockSearchError
           live: root.stocksLive
           every: root.stocksEvery
           lastAt: root.stocksAt
@@ -1001,9 +1017,9 @@ Item {
         SettingsPage {
           id: settingsPage
           t: theme
-          y: content.pageY
+          y: pageArea.pageY
           width: parent.width
-          height: content.pageH
+          height: pageArea.pageH
           shown: root.live && root.page === 3
           // Demo mode never shows the real settings (your name, for one).
           settings: root.demo ? ({}) : root.settings
@@ -1017,9 +1033,9 @@ Item {
           id: chat
           t: theme
           z: 5
-          y: content.height - content.chatH
+          y: pageArea.height - pageArea.chatH
           width: parent.width
-          height: content.chatH
+          height: pageArea.chatH
           shown: root.live
           order: 12
           replyFor: function(q) { return root.demoReply(q) }

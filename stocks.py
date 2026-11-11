@@ -20,6 +20,7 @@ import re
 import sys
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -50,6 +51,19 @@ def fetch(url):
     if len(raw) > MAX_BYTES:
         raise ValueError("response too large")
     return json.loads(raw.decode("utf-8", "replace"))
+
+
+def friendly(e):
+    """An error a person can read, instead of "<urlopen error [Errno 111]...>"."""
+    if isinstance(e, urllib.error.HTTPError):
+        if e.code == 404:
+            return "no data for this symbol"
+        if e.code == 429:
+            return "Yahoo Finance is busy, trying again shortly"
+        return "Yahoo Finance answered with an error (%d)" % e.code
+    if isinstance(e, (urllib.error.URLError, TimeoutError, OSError)):
+        return "can't reach Yahoo Finance (offline?)"
+    return str(e)[:160]
 
 
 def num(v):
@@ -174,7 +188,7 @@ def serve():
             try:
                 quotes[s] = f.result()
             except Exception as e:
-                errors.append("%s: %s" % (s, str(e)[:80]))
+                errors.append("%s: %s" % (s, friendly(e)))
         any_open = any(q.get("open") for q in quotes.values())
         emit({"type": "quotes", "quotes": quotes, "errors": errors, "live": any_open,
               "every": LIVE_EVERY if any_open else CLOSED_EVERY, "at": int(time.time())})
@@ -197,7 +211,7 @@ def serve():
             try:
                 emit(dict(type=kind, **extra, **fn(*args)))
             except Exception as e:
-                emit(dict(type="error", of=kind, error=str(e)[:160], **extra))
+                emit(dict(type="error", of=kind, error=friendly(e), **extra))
         pool.submit(job)
 
     for line in sys.stdin:

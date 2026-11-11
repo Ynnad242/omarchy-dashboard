@@ -51,7 +51,7 @@ GlassCard {
       anchors.bottom: parent.bottom
       width: parent.width * 0.68
 
-      readonly property real axisW: card.t.px(36)
+      readonly property real axisW: card.t.px(46)
       readonly property real labelH: card.t.px(22)
       readonly property real topPad: card.t.px(26)
       readonly property real chartH: height - labelH - topPad
@@ -75,7 +75,7 @@ GlassCard {
             x: plot.axisW
             width: plot.width - plot.axisW
             height: 1
-            color: Qt.rgba(1, 1, 1, index === 0 ? 0.10 : 0.045)
+            color: card.t.inkA(index === 0 ? 0.10 : 0.045)
           }
         }
       }
@@ -131,7 +131,7 @@ GlassCard {
               width: lane.barW
               height: col.barH
               radius: card.t.px(3)
-              color: col.isCurrent ? card.t.accent : Qt.rgba(1, 1, 1, col.isHover ? 0.16 : 0.09)
+              color: col.isCurrent ? card.t.accent : card.t.inkA(col.isHover ? 0.20 : 0.13)
               Behavior on color { ColorAnimation { duration: 120 } }
             }
 
@@ -139,7 +139,7 @@ GlassCard {
               t: card.t
               anchors.horizontalCenter: parent.horizontalCenter
               y: parent.height + card.t.px(6)
-              text: col.modelData.label
+              text: col.modelData.hour !== undefined ? card.t.hourLabel(col.modelData.hour) : col.modelData.label
               size: 10
               color: col.isCurrent ? card.t.text : card.t.textFaint
               font.weight: col.isCurrent ? Font.DemiBold : Font.Normal
