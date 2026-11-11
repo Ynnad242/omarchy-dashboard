@@ -568,7 +568,8 @@ Item {
              total: doneToday + dueToday, delta: doneToday - doneYday, deltaLabel: "vs yesterday", spark: spark }
     var mailNeeds = (root.mail.mails || []).filter(function(m) { return m.needsReply }).length
     s[2] = root.mail.status === "ok"
-      ? { key: "inbox", title: "Unread email", icon: "\uf0e0", tone: "yellow", kind: "count", value: root.mail.unread || 0, spark: [],
+      ? { key: "inbox", title: "Unread this week", icon: "\uf0e0", tone: "yellow", kind: "count",
+          value: root.mail.recent !== undefined ? root.mail.recent : (root.mail.unread || 0), spark: [],
           note: mailNeeds ? mailNeeds + (mailNeeds === 1 ? " needs a reply" : " need a reply") : "" }
       : { key: "inbox", title: "Email", icon: "\uf0e0", tone: "yellow", kind: "text", value: 0, spark: [],
           text: root.mail.status === "off" ? "Not set up" : "Can't connect" }

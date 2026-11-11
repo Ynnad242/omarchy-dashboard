@@ -197,7 +197,8 @@ def fetch(c, password):
             typ, data = m.search(None, "X-GM-RAW", '"in:inbox is:unread category:primary newer_than:7d"')
         else:
             typ, data = m.search(None, "UNSEEN", "SINCE", since)
-        ids = data[0].split()[-25:] if typ == "OK" and data and data[0] else []
+        recent_ids = data[0].split() if typ == "OK" and data and data[0] else []
+        ids = recent_ids[-25:]
         me = c["address"].lower()
         out = []
         for i in reversed(ids):
@@ -210,7 +211,9 @@ def fetch(c, password):
                 out.append(row)
         # People first, then everything else; newest first within each.
         out.sort(key=lambda r: (not r["personal"], -r["ts"]))
-        return {"unread": unread, "mails": out[:10]}
+        # "recent": unread from the last week (Gmail: Primary only), which says
+        # more than an all-time unread count in the thousands.
+        return {"unread": unread, "recent": len(recent_ids), "mails": out[:10]}
     finally:
         try:
             m.logout()

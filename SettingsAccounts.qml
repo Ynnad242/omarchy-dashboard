@@ -193,7 +193,7 @@ Item {
           }
           Status {
             t: pane.t
-            text: pane.mail.status === "ok" ? "Connected  ·  " + (pane.mail.unread || 0) + " unread"
+            text: pane.mail.status === "ok" ? "Connected  ·  " + (pane.mail.recent !== undefined ? pane.mail.recent + " unread this week" : (pane.mail.unread || 0) + " unread")
                 : pane.mail.status === "nopassword" ? "The saved password is missing. Sign out and sign in again."
                 : "Can't check email: " + (pane.mail.error || "unknown error")
             color: pane.mail.status === "ok" ? pane.t.green : pane.t.red
