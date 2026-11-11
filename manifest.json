@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "ynnad.jarvis",
   "name": "Jarvis",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "ynnad",
   "description": "A home screen that lives on workspace 1: screen time, tasks, live stocks, weather, Govee lamps and air purifier, Discord, and an exercise coach that nudges you off doomscrolling. Seven styles.",
   "kinds": [
@@ -13,5 +13,5 @@
     "overlay": "Jarvis.qml"
   },
   "license": "MIT",
-  "homepage": "https://github.com/Ynnad242/omarchy-jarvis"
+  "homepage": "https://github.com/Ynnad242/omarchy-dashboard"
 }

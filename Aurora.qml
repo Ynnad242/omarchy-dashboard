@@ -5,7 +5,8 @@ import QtQuick
 //   neu    one even mid-tone; the cards' shadows do the work
 //   glass  soft fields of color for the translucent panes to sit over
 //   clay   a warm glow toward the top
-//   y2k    a loud purple / magenta / cyan wash with a few bubbles
+//   y2k    electric cobalt, a perspective floor grid, a wireframe globe,
+//          sparkles and HUD labels in the margins
 //   swiss  plain paper with a faint 12-column grid
 //   wabi   warm paper with a little grain
 // Painted with gradients and a Canvas, so no shader support is needed.
@@ -63,27 +64,65 @@ Item {
         blob(w * 0.5, -h * 0.1, h * 0.9, shifted(a, 0.05, 0.35, 0.55), 0.18)
         break
       case "y2k": {
-        var g = ctx.createLinearGradient(0, 0, w, h)
-        g.addColorStop(0, "#2b0a5e")
-        g.addColorStop(0.45, "#5a0f6e")
-        g.addColorStop(0.75, "#0f3a6e")
-        g.addColorStop(1, "#06323f")
+        // Electric cobalt, brighter toward the top-right.
+        var g = ctx.createLinearGradient(0, 0, 0, h)
+        g.addColorStop(0, "#0b22e0")
+        g.addColorStop(0.55, "#06128f")
+        g.addColorStop(1, "#020538")
         ctx.fillStyle = g
         ctx.fillRect(0, 0, w, h)
-        blob(w * 0.85, h * 0.1, h * 0.6, Qt.rgba(1, 0.37, 0.82, 1), 0.55)
-        blob(w * 0.1, h * 0.9, h * 0.7, Qt.rgba(0.2, 0.9, 1, 1), 0.40)
-        // Bubbles with a glossy highlight.
-        var bubbles = [[0.62, 0.18, 0.05], [0.08, 0.3, 0.035], [0.93, 0.62, 0.06], [0.4, 0.92, 0.04]]
-        for (var i = 0; i < bubbles.length; i++) {
-          var bx = w * bubbles[i][0], by = h * bubbles[i][1], br = h * bubbles[i][2]
-          var bg = ctx.createRadialGradient(bx - br * 0.35, by - br * 0.35, br * 0.05, bx, by, br)
-          bg.addColorStop(0, "rgba(255,255,255,0.55)")
-          bg.addColorStop(0.35, "rgba(255,255,255,0.10)")
-          bg.addColorStop(0.9, "rgba(255,180,255,0.10)")
-          bg.addColorStop(1, "rgba(255,255,255,0.35)")
-          ctx.fillStyle = bg
-          ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill()
+        blob(w * 0.82, h * 0.05, h * 0.75, Qt.rgba(0.35, 0.55, 1, 1), 0.55)
+        blob(w * 0.05, h * 0.95, h * 0.6, Qt.rgba(0.2, 0.9, 1, 1), 0.18)
+
+        // A perspective floor grid over the bottom third.
+        ctx.strokeStyle = "rgba(150,190,255,0.16)"
+        ctx.lineWidth = 1
+        var horizon = h * 0.62, vx = w * 0.5
+        for (var r = 1; r <= 14; r++) {
+          var fy = horizon + (h - horizon) * Math.pow(r / 14, 1.9)
+          ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(w, fy); ctx.stroke()
         }
+        for (var c = -14; c <= 14; c++) {
+          ctx.beginPath(); ctx.moveTo(vx + c * w * 0.012, horizon); ctx.lineTo(vx + c * w * 0.11, h); ctx.stroke()
+        }
+
+        // A wireframe globe, top right.
+        var gx = w * 0.9, gy = h * 0.2, gr = h * 0.16
+        ctx.strokeStyle = "rgba(200,220,255,0.22)"
+        ctx.beginPath(); ctx.arc(gx, gy, gr, 0, Math.PI * 2); ctx.stroke()
+        for (var k = 1; k <= 3; k++) {
+          ctx.save(); ctx.translate(gx, gy); ctx.scale(k / 4, 1)
+          ctx.beginPath(); ctx.arc(0, 0, gr, 0, Math.PI * 2); ctx.restore(); ctx.stroke()
+          ctx.save(); ctx.translate(gx, gy); ctx.scale(1, k / 4)
+          ctx.beginPath(); ctx.arc(0, 0, gr, 0, Math.PI * 2); ctx.restore(); ctx.stroke()
+        }
+
+        // Four-point sparkles with a soft halo.
+        function sparkle(x, y, r) {
+          var halo = ctx.createRadialGradient(x, y, 0, x, y, r * 2.2)
+          halo.addColorStop(0, "rgba(220,235,255,0.55)")
+          halo.addColorStop(1, "rgba(220,235,255,0)")
+          ctx.fillStyle = halo
+          ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, Math.PI * 2); ctx.fill()
+          ctx.fillStyle = "rgba(255,255,255,0.95)"
+          ctx.beginPath()
+          ctx.moveTo(x, y - r)
+          ctx.quadraticCurveTo(x, y, x + r, y)
+          ctx.quadraticCurveTo(x, y, x, y + r)
+          ctx.quadraticCurveTo(x, y, x - r, y)
+          ctx.quadraticCurveTo(x, y, x, y - r)
+          ctx.fill()
+        }
+        var stars = [[0.035, 0.12, 0.022], [0.62, 0.06, 0.014], [0.975, 0.48, 0.02], [0.3, 0.97, 0.012], [0.04, 0.72, 0.016], [0.83, 0.93, 0.018]]
+        for (var i = 0; i < stars.length; i++) sparkle(w * stars[i][0], h * stars[i][1], h * stars[i][2])
+
+        // HUD labels in the margins.
+        ctx.fillStyle = "rgba(210,225,255,0.55)"
+        ctx.font = Math.round(h * 0.0095) + "px monospace"
+        ctx.save(); ctx.translate(w - h * 0.012, h * 0.62); ctx.rotate(Math.PI / 2)
+        ctx.fillText("2000 AND BEYOND  //  DIGITAL DREAMS", 0, 0); ctx.restore()
+        ctx.save(); ctx.translate(h * 0.016, h * 0.97); ctx.rotate(-Math.PI / 2)
+        ctx.fillText(">> SYSTEM ONLINE   \u25cf  CONNECTION OK", 0, 0); ctx.restore()
         break
       }
       case "swiss": {

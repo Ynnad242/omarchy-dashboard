@@ -11,10 +11,14 @@ inside the Omarchy shell as the `ynnad.jarvis` plugin.
 |---|---|---|
 | ![Tasks](docs/tasks.png) | ![Stocks](docs/stocks.png) | ![Settings](docs/settings.png) |
 
-Seven styles: flat, glass (below), neumorphism, claymorphism, Y2K, Swiss and
-wabi-sabi, with your own colors on top. Screenshots use made-up demo data.
+Seven styles, switchable in Settings, with your own colors on top: flat,
+glass, neumorphism, claymorphism, Y2K, Swiss and wabi-sabi.
 
-![Jarvis in the glass style](docs/home-glass.png)
+![All seven styles](docs/styles.jpg)
+
+![Jarvis in the Y2K style](docs/home-y2k.png)
+
+Screenshots use made-up demo data.
 
 **Not finished yet**, and labeled as such on screen: the email card ("Gmail
 isn't linked yet") and the chat bar, which answers from your local data with a
@@ -23,7 +27,7 @@ note that Claude isn't connected.
 ## Install
 
 ```bash
-omarchy plugin add https://github.com/Ynnad242/omarchy-jarvis --enable
+omarchy plugin add https://github.com/Ynnad242/omarchy-dashboard --enable
 ```
 
 Jarvis opens as a normal window. To keep it on workspace 1 and add a shortcut,

@@ -63,25 +63,30 @@ QtObject {
       dark: true, base: Qt.darker(bg, 1.75), surface: Qt.rgba(1, 1, 1, 0.06), hover: Qt.rgba(1, 1, 1, 0.085),
       raised: Qt.rgba(1, 1, 1, 0.11), border: Qt.rgba(1, 1, 1, 0.13), borderStrong: Qt.rgba(1, 1, 1, 0.24),
       text: darkText, radius: 16, small: 9, font: "Adwaita Sans" }
+    // Soft UI: a light gray canvas, white highlight up-left, gray shade
+    // down-right, a muted blue for anything that's on.
     case "neu": return {
-      dark: true, base: Qt.lighter(bg, 1.3), surface: Qt.lighter(bg, 1.3), hover: Qt.lighter(bg, 1.33),
-      raised: Qt.lighter(bg, 1.3), border: Qt.rgba(1, 1, 1, 0), borderStrong: Qt.rgba(1, 1, 1, 0.07),
-      text: darkText, radius: 20, small: 10, font: "Adwaita Sans" }
+      dark: false, base: "#e3e6eb", surface: "#e3e6eb", hover: "#e6e9ee", raised: "#e3e6eb",
+      border: Qt.rgba(0, 0, 0, 0), borderStrong: Qt.rgba(0, 0, 0, 0.06), text: "#2c323b",
+      radius: 22, small: 12, font: "Adwaita Sans", accent: "#36659d", green: "#2f8a52", red: "#c94a46", yellow: "#a8701a",
+      shadowLight: "#ffffff", shadowDark: "#b4bcc8" }
     case "clay": return {
       dark: true, base: Qt.darker(bg, 1.2), surface: Qt.lighter(bg, 1.45), hover: Qt.lighter(bg, 1.55),
       raised: Qt.lighter(bg, 1.8), border: Qt.rgba(1, 1, 1, 0), borderStrong: Qt.rgba(1, 1, 1, 0.08),
       text: darkText, radius: 28, small: 14, font: "Adwaita Sans" }
+    // Y2K futurism: electric cobalt, retro OS windows, a hot lime accent.
     case "y2k": return {
-      dark: true, base: "#14092b", surface: Qt.rgba(1, 1, 1, 0.10), hover: Qt.rgba(1, 1, 1, 0.14),
-      raised: Qt.rgba(1, 1, 1, 0.20), border: Qt.rgba(1, 1, 1, 0.45), borderStrong: Qt.rgba(1, 1, 1, 0.8),
-      text: "#f7f2ff", radius: 18, small: 12, font: "Adwaita Sans", accent: "#ff5fd2" }
+      dark: true, base: "#06128f", surface: Qt.rgba(0.02, 0.05, 0.30, 0.62), hover: Qt.rgba(0.03, 0.07, 0.36, 0.70),
+      raised: Qt.rgba(1, 1, 1, 0.14), border: Qt.rgba(0.67, 0.78, 1, 0.55), borderStrong: "#dfe9ff",
+      text: "#f4f7ff", radius: 6, small: 4, font: "Adwaita Sans", accent: "#c8ff3a",
+      green: "#5dffa0", red: "#ff5c8a", yellow: "#ffe14d" }
     case "swiss": return {
       dark: false, base: "#f2f0eb", surface: "#f2f0eb", hover: "#ebe8e1", raised: "#e2ded6",
       border: "#111111", borderStrong: "#111111", text: "#111111", radius: 0, small: 0, font: "Liberation Sans",
       accent: "#e30613", green: "#1a7f37", red: "#e30613", yellow: "#a35200" }
     case "wabi": return {
-      dark: false, base: "#e7e0d3", surface: "#efe9de", hover: "#f3eee5", raised: "#ddd5c6",
-      border: Qt.rgba(0.23, 0.2, 0.17, 0.12), borderStrong: Qt.rgba(0.23, 0.2, 0.17, 0.24), text: "#3a332b",
+      dark: false, base: "#ddd3c1", surface: "#f6f1e6", hover: "#f9f5ec", raised: "#e6ddcc",
+      border: Qt.rgba(0.23, 0.19, 0.14, 0.26), borderStrong: Qt.rgba(0.23, 0.19, 0.14, 0.42), text: "#3a332b",
       radius: 5, small: 4, font: "C059", accent: "#a5623d", green: "#5f7a4a", red: "#a8553a", yellow: "#9a742b" }
     default: return {
       dark: true, base: Qt.darker(bg, 1.45), surface: Qt.tint(Qt.darker(bg, 1.45), Qt.rgba(1, 1, 1, 0.035)),
@@ -127,8 +132,8 @@ QtObject {
   readonly property color glassHover: surfaceHover
   // Neumorphism lights everything from the top-left with two tones of the
   // canvas itself: a lighter one for the lit edge, a darker one for shade.
-  readonly property color shadowLight: Qt.lighter(base, 1.3)
-  readonly property color shadowDark: Qt.darker(base, 1.7)
+  readonly property color shadowLight: preset.shadowLight || Qt.lighter(base, 1.3)
+  readonly property color shadowDark: preset.shadowDark || Qt.darker(base, 1.7)
   readonly property color glassInset: neu ? Qt.darker(base, 1.06) : clay ? Qt.darker(surface, 1.12) : inkA(dark ? 0.035 : 0.04)
   readonly property color stroke: border
   readonly property color strokeHover: borderStrong

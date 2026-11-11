@@ -22,7 +22,7 @@ GlassCard {
       width: mcount.implicitWidth + card.t.px(14)
       radius: height / 2
       color: "transparent"
-      JText { id: mcount; t: card.t; anchors.centerIn: parent; text: card.mentions.length + (card.mentions.length === 1 ? " ping" : " pings") + " today"; size: 9.5; color: card.t.red }
+      JText { id: mcount; t: card.t; anchors.centerIn: parent; text: card.mentions.length + (card.mentions.length === 1 ? " ping" : " pings") + " today"; size: 9.5; color: card.t.y2k ? card.t.yellow : card.t.red }
     }
   ]
 

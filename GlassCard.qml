@@ -29,6 +29,7 @@ Item {
   property real rise: t.px(8)
   readonly property bool hovered: hover.hovered
   readonly property real headerHeight: title.length > 0 ? t.px(22) : 0
+  readonly property real y2kBar: t.px(30)
   default property alias content: body.data
   property alias headerExtra: extra.data
 
@@ -62,11 +63,11 @@ Item {
   NumberAnimation { id: exit; target: card; property: "opacity"; to: 0; duration: Style.duration(110); easing.type: Easing.OutCubic }
 
   // ---- shadows (behind the surface) ----------------------------------------------
-  SoftShadow { visible: card.t.neu; target: bg; radius: bg.radius; blur: card.t.px(22); dx: -card.t.px(9); dy: -card.t.px(9); color: card.t.shadowLight; strength: 0.85 }
-  SoftShadow { visible: card.t.neu; target: bg; radius: bg.radius; blur: card.t.px(22); dx: card.t.px(9); dy: card.t.px(9); color: card.t.shadowDark; strength: 0.95 }
+  SoftShadow { visible: card.t.neu; target: bg; radius: bg.radius; blur: card.t.px(24); dx: -card.t.px(10); dy: -card.t.px(10); color: card.t.shadowLight; strength: 1.0 }
+  SoftShadow { visible: card.t.neu; target: bg; radius: bg.radius; blur: card.t.px(26); dx: card.t.px(11); dy: card.t.px(11); color: card.t.shadowDark; strength: 0.9 }
   SoftShadow { visible: card.t.clay; target: bg; radius: bg.radius; blur: card.t.px(36); dx: 0; dy: card.t.px(16); color: "black"; strength: 0.8 }
-  SoftShadow { visible: card.t.y2k; target: bg; radius: bg.radius; blur: card.t.px(26); dx: 0; dy: card.t.px(10); color: "#2a0a4a"; strength: 0.7 }
-  SoftShadow { visible: card.t.wabi; target: bg; radius: bg.radius; blur: card.t.px(16); dx: 0; dy: card.t.px(4); color: "#3a2a1a"; strength: 0.14 }
+  SoftShadow { visible: card.t.y2k; target: bg; radius: bg.radius; blur: card.t.px(3); dx: card.t.px(6); dy: card.t.px(6); color: "#00052e"; strength: 0.9; steps: 3 }
+  SoftShadow { visible: card.t.wabi; target: bg; radius: bg.radius; blur: card.t.px(22); dx: 0; dy: card.t.px(7); color: "#3a2a1a"; strength: 0.26 }
 
   // ---- the surface --------------------------------------------------------------------
   Rectangle {
@@ -125,18 +126,74 @@ Item {
       border.color: Qt.rgba(1, 1, 1, 0.07)
     }
 
-    // y2k: candy gloss over the top half
-    Rectangle {
+    // y2k: a retro OS window. Bevelled frame (light up-left, dark down-right)
+    // and a glossy title bar carrying the card's name and window buttons.
+    Item {
       visible: card.t.y2k
       anchors.fill: parent
       anchors.margins: card.t.px(1.5)
-      radius: parent.radius - card.t.px(1.5)
-      gradient: Gradient {
-        GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.30) }
-        GradientStop { position: 0.45; color: Qt.rgba(1, 1, 1, 0.06) }
-        GradientStop { position: 0.5; color: Qt.rgba(1, 1, 1, 0.0) }
-        GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.10) }
+      Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.55) }
+      Rectangle { width: 1; height: parent.height; color: Qt.rgba(1, 1, 1, 0.35) }
+      Rectangle { y: parent.height - 1; width: parent.width; height: 1; color: Qt.rgba(0, 0, 0.12, 0.7) }
+      Rectangle { x: parent.width - 1; width: 1; height: parent.height; color: Qt.rgba(0, 0, 0.12, 0.7) }
+
+      Rectangle {
+        id: titleBar
+        visible: card.title.length > 0
+        x: card.t.px(3); y: card.t.px(3)
+        width: parent.width - card.t.px(6)
+        height: card.y2kBar
+        radius: card.t.px(3)
+        gradient: Gradient {
+          orientation: Gradient.Horizontal
+          GradientStop { position: 0.0; color: "#1236ff" }
+          GradientStop { position: 0.7; color: "#2a63ff" }
+          GradientStop { position: 1.0; color: "#5b8cff" }
+        }
+        // Gloss across the top half of the bar.
+        Rectangle {
+          anchors.fill: parent
+          radius: parent.radius
+          gradient: Gradient {
+            GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.45) }
+            GradientStop { position: 0.5; color: Qt.rgba(1, 1, 1, 0.08) }
+            GradientStop { position: 0.51; color: Qt.rgba(1, 1, 1, 0.0) }
+            GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.0) }
+          }
+        }
+        Row {
+          anchors.right: parent.right
+          anchors.rightMargin: card.t.px(5)
+          anchors.verticalCenter: parent.verticalCenter
+          spacing: card.t.px(3)
+          Repeater {
+            model: ["_", "\u25a1", "\u00d7"]
+            Rectangle {
+              required property string modelData
+              width: card.t.px(17); height: width
+              radius: card.t.px(3)
+              gradient: Gradient {
+                GradientStop { position: 0.0; color: "#ffffff" }
+                GradientStop { position: 1.0; color: "#b9c6e6" }
+              }
+              border.width: 1
+              border.color: "#0a1f8f"
+              JText { t: card.t; anchors.centerIn: parent; text: parent.modelData; size: 9; font.weight: Font.Bold; color: "#0a1f8f" }
+            }
+          }
+        }
       }
+    }
+
+    // wabi: a thin inner mat line, like a framed print
+    Rectangle {
+      visible: card.t.wabi
+      anchors.fill: parent
+      anchors.margins: card.t.px(6)
+      radius: Math.max(0, parent.radius - card.t.px(3))
+      color: "transparent"
+      border.width: 1
+      border.color: Qt.rgba(0.23, 0.19, 0.14, 0.12)
     }
 
     // swiss: a heavy rule across the top instead of a box
@@ -153,9 +210,9 @@ Item {
   Item {
     id: header
     visible: card.title.length > 0
-    x: card.t.swiss ? 0 : card.pad
-    y: card.pad - card.t.px(2)
-    width: card.width - x * 2
+    x: card.t.swiss ? 0 : card.t.y2k ? card.t.px(14) : card.pad
+    y: card.t.y2k ? card.t.px(4.5) + (card.y2kBar - card.headerHeight) / 2 : card.pad - card.t.px(2)
+    width: card.width - x * 2 - (card.t.y2k ? card.t.px(62) : 0)
     height: card.headerHeight
 
     JText {
@@ -163,12 +220,13 @@ Item {
       t: card.t
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
-      text: card.t.swiss ? card.title.toUpperCase() : card.title
-      size: card.t.swiss ? 11.5 : 12.5
-      font.weight: card.t.swiss ? Font.Bold : Font.Medium
-      font.letterSpacing: card.t.swiss ? 1.2 : 0
+      text: card.t.swiss || card.t.y2k ? card.title.toUpperCase() : card.title
+      size: card.t.swiss ? 11.5 : card.t.y2k ? 11 : 12.5
+      mono: card.t.y2k
+      font.weight: card.t.swiss || card.t.y2k ? Font.Bold : Font.Medium
+      font.letterSpacing: card.t.swiss ? 1.2 : card.t.y2k ? 1.5 : 0
       font.italic: card.t.wabi
-      color: card.t.swiss ? card.t.text : card.t.textDim
+      color: card.t.y2k ? "white" : card.t.swiss ? card.t.text : card.t.textDim
     }
     JText {
       visible: card.sample
@@ -213,7 +271,7 @@ Item {
   Item {
     id: body
     x: card.t.swiss ? 0 : card.pad
-    y: card.pad + (card.title.length > 0 ? card.headerHeight + card.t.px(12) : 0)
+    y: card.t.y2k && card.title.length > 0 ? card.y2kBar + card.t.px(18) : card.pad + (card.title.length > 0 ? card.headerHeight + card.t.px(12) : 0)
     width: card.width - x * 2
     height: card.height - y - (card.t.swiss ? 0 : card.pad)
   }
