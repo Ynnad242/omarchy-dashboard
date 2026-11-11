@@ -88,7 +88,10 @@ in Settings, or edit the site and app lists in `~/.config/jarvis/coach.json`.
 | Tab, Space, arrows | Move between and change controls in Settings |
 
 Settings has the style, colors, your name, the clock, the exercise coach, and a
-switch for every online service.
+switch for every online service. Under Style, **Presets** are the seven built-in
+looks and **Yours** holds themes you save: pick a preset, change any colors,
+then "Save current" (or "Save as theme" on the Colors card) to switch back to it
+any time. Saved themes stay on your computer.
 
 ## Privacy
 
@@ -103,7 +106,7 @@ is no account, no analytics and no tracking.
 | `~/.local/state/jarvis/coach.json` | The exercise coach's meter, current challenge, sets done today |
 | `~/.local/state/jarvis/todos.json` | Your tasks |
 | `~/.local/state/jarvis/weather.json`, `home.json` | Caches of the last weather and lamp/purifier state |
-| `~/.config/jarvis/settings.json`, `look.json`, `coach.json`, `stocks.json` | Your settings and watchlist |
+| `~/.config/jarvis/settings.json`, `look.json`, `coach.json`, `stocks.json` | Your settings, style, saved themes and watchlist |
 | `~/.config/jarvis/govee.json` | Your Govee API key (readable only by you) |
 
 Screen time records the focused app's name. For browsers it records only which

@@ -38,6 +38,8 @@ QtObject {
 
   property string style: Quickshell.env("JARVIS_STYLE") || "flat"
   property var custom: ({})          // hand-picked colors, by key
+  // The user's own saved themes: [{ name, style, colors }], newest last.
+  property var saved: []
   readonly property bool glassy: style === "glass"
   readonly property bool neu: style === "neu"
   readonly property bool clay: style === "clay"
@@ -166,7 +168,56 @@ QtObject {
   }
   function resetColors() { t.custom = ({}); save() }
   function save() {
-    lookFile.setText(JSON.stringify({ style: t.style, colors: t.custom }, null, 2) + "\n")
+    lookFile.setText(JSON.stringify({ style: t.style, colors: t.custom, saved: t.saved }, null, 2) + "\n")
+  }
+
+  // ---- saved themes ---------------------------------------------------------------------
+  function copyColors(c) {
+    var out = {}
+    for (var k in (c || {})) if (/^#[0-9a-fA-F]{6}$/.test(String(c[k]))) out[k] = String(c[k]).toLowerCase()
+    return out
+  }
+  function sameColors(a, b) {
+    var x = copyColors(a), y = copyColors(b), kx = Object.keys(x), ky = Object.keys(y)
+    if (kx.length !== ky.length) return false
+    for (var i = 0; i < kx.length; i++) if (x[kx[i]] !== y[kx[i]]) return false
+    return true
+  }
+  // Which saved theme is showing right now, or -1.
+  readonly property int activeSaved: {
+    for (var i = 0; i < t.saved.length; i++)
+      if (t.saved[i].style === t.style && sameColors(t.saved[i].colors, t.custom)) return i
+    return -1
+  }
+  function uniqueName() {
+    var n = t.saved.length + 1
+    while (t.saved.some(function(e) { return e.name === "My theme " + n })) n++
+    return "My theme " + n
+  }
+  // Save the style and colors in use under a name; the same name updates it.
+  function saveCurrent(name) {
+    name = String(name || "").trim().slice(0, 30) || uniqueName()
+    var entry = { name: name, style: t.style, colors: copyColors(t.custom) }
+    var list = t.saved.slice()
+    var at = -1
+    for (var i = 0; i < list.length; i++) if (list[i].name === name) at = i
+    if (at >= 0) list[at] = entry
+    else list.push(entry)
+    t.saved = list.slice(-24)
+    save()
+  }
+  function applySaved(i) {
+    var e = t.saved[i]
+    if (!e) return
+    t.style = e.style
+    t.custom = copyColors(e.colors)
+    save()
+  }
+  function deleteSaved(i) {
+    var list = t.saved.slice()
+    list.splice(i, 1)
+    t.saved = list
+    save()
   }
 
   property FileView lookFile: FileView {
@@ -182,6 +233,10 @@ QtObject {
           for (var i = 0; i < t.styles.length; i++) if (t.styles[i].key === j.style) t.style = j.style
         }
         t.custom = j.colors && typeof j.colors === "object" ? j.colors : ({})
+        var keys = t.styles.map(function(x) { return x.key })
+        t.saved = (Array.isArray(j.saved) ? j.saved : []).filter(function(e) {
+          return e && typeof e.name === "string" && keys.indexOf(e.style) >= 0
+        }).slice(0, 24).map(function(e) { return { name: e.name.slice(0, 30), style: e.style, colors: t.copyColors(e.colors) } })
       } catch (e) {}
     }
   }

@@ -260,6 +260,56 @@ Item {
   }
 
   // ---- Style -----------------------------------------------------------------------------
+  // Presets: the seven built-in styles. Yours: themes you saved (a style plus
+  // your colors), and a tile to save what you have now. Kept in look.json.
+  property string styleTab: "presets"
+  property bool naming: false
+  function startSaving() { styleTab = "mine"; naming = true }
+
+  // A tiny drawing of a look: its canvas, one card, the text and the accent.
+  component Mini: Rectangle {
+    id: mini
+    property string styleKey: "flat"
+    property var colors: ({})
+    property bool active: false
+    property bool focused: false
+    readonly property var p: page.t.presetFor(styleKey)
+    function c(key, fallback) { var v = colors && colors[key]; return v ? v : fallback }
+    radius: page.t.px(8)
+    clip: true
+    color: c("background", p.base)
+    border.width: active || focused ? page.t.px(2) : 1
+    border.color: active ? page.t.accent : focused ? page.t.text : page.t.border
+    gradient: colors && colors.background ? null : styleKey === "y2k" ? y2kGrad : styleKey === "glass" ? glassGrad : null
+    Gradient { id: y2kGrad; GradientStop { position: 0; color: "#0b22e0" } GradientStop { position: 1; color: "#020538" } }
+    Gradient { id: glassGrad; GradientStop { position: 0; color: Qt.darker(page.t.themeAccent, 2.2) } GradientStop { position: 1; color: mini.p.base } }
+
+    Rectangle {
+      x: parent.width * 0.16; y: parent.height * 0.24
+      width: parent.width * 0.68; height: parent.height * 0.52
+      radius: Math.min(height / 2, mini.p.radius * 0.6)
+      color: mini.styleKey === "swiss" ? "transparent" : mini.c("surface", mini.p.surface)
+      border.width: mini.styleKey === "neu" || mini.styleKey === "clay" || mini.styleKey === "swiss" ? 0 : 1
+      border.color: mini.c("border", mini.p.border)
+      Rectangle { visible: mini.styleKey === "swiss"; width: parent.width; height: 3; color: mini.c("text", mini.p.text) }
+      Rectangle {
+        visible: mini.styleKey === "y2k"
+        x: 2; y: 2; width: parent.width - 4; height: Math.max(4, parent.height * 0.18); radius: 2
+        color: "#2a63ff"
+      }
+      Rectangle {
+        x: page.t.px(8); y: mini.styleKey === "y2k" ? parent.height * 0.32 : page.t.px(8)
+        width: parent.width * 0.4; height: page.t.px(4); radius: 2
+        color: mini.c("text", mini.p.text); opacity: 0.6
+      }
+      Rectangle {
+        x: page.t.px(8); anchors.bottom: parent.bottom; anchors.bottomMargin: page.t.px(8)
+        width: page.t.px(10); height: width; radius: width / 2
+        color: mini.c("accent", mini.p.accent || page.t.themeAccent)
+      }
+    }
+  }
+
   GlassCard {
     id: styleCard
     t: page.t
@@ -271,8 +321,20 @@ Item {
     height: Math.round((page.height - page.gap) * 0.46)
     title: "Style"
 
+    headerExtra: [
+      Segmented {
+        t: page.t
+        slotW: page.t.px(84)
+        options: [{ key: "presets", label: "Presets" }, { key: "mine", label: "Yours" + (page.t.saved.length ? " (" + page.t.saved.length + ")" : "") }]
+        current: page.styleTab
+        onPicked: function(k) { page.styleTab = k; page.naming = false }
+      }
+    ]
+
+    // Presets
     Grid {
       id: tiles
+      visible: page.styleTab === "presets"
       width: parent.width
       columns: 4
       spacing: page.t.px(14)
@@ -285,64 +347,227 @@ Item {
           id: tile
           required property var modelData
           required property int index
-          readonly property var p: page.t.presetFor(modelData.key)
-          readonly property bool active: page.t.style === modelData.key
+          readonly property bool active: page.t.style === modelData.key && Object.keys(page.t.custom || {}).length === 0
+          readonly property bool base: page.t.style === modelData.key
           width: tiles.tileW
           height: tiles.tileH + page.t.px(26)
-          activeFocusOnTab: true
+          activeFocusOnTab: page.styleTab === "presets"
           Accessible.role: Accessible.RadioButton
           Accessible.name: modelData.label + " style"
-          Accessible.checked: active
+          Accessible.checked: base
           Keys.onPressed: function(e) { if (e.key === Qt.Key_Space || e.key === Qt.Key_Return) { page.t.setStyle(tile.modelData.key); e.accepted = true } }
 
-          // A tiny drawing of the style: its canvas, one card, the accent.
-          Rectangle {
-            id: mini
-            width: parent.width
-            height: tiles.tileH
-            radius: page.t.px(8)
-            color: tile.p.base
-            clip: true
-            border.width: tile.active || tile.activeFocus ? page.t.px(2) : 1
-            border.color: tile.active ? page.t.accent : tile.activeFocus ? page.t.text : page.t.border
-            gradient: tile.modelData.key === "y2k" ? y2kGrad : tile.modelData.key === "glass" ? glassGrad : null
-            Gradient { id: y2kGrad; orientation: Gradient.Horizontal; GradientStop { position: 0; color: "#2b0a5e" } GradientStop { position: 0.6; color: "#5a0f6e" } GradientStop { position: 1; color: "#0f3a6e" } }
-            Gradient { id: glassGrad; GradientStop { position: 0; color: Qt.darker(page.t.themeAccent, 2.2) } GradientStop { position: 1; color: tile.p.base } }
-
-            Rectangle {
-              x: parent.width * 0.16; y: parent.height * 0.24
-              width: parent.width * 0.68; height: parent.height * 0.52
-              radius: Math.min(height / 2, tile.p.radius * 0.6)
-              color: tile.modelData.key === "swiss" ? "transparent" : tile.p.surface
-              border.width: tile.modelData.key === "neu" || tile.modelData.key === "clay" || tile.modelData.key === "swiss" ? 0 : 1
-              border.color: tile.p.border
-              Rectangle { visible: tile.modelData.key === "swiss"; width: parent.width; height: 3; color: tile.p.text }
-              Rectangle {
-                x: page.t.px(8); y: page.t.px(8)
-                width: parent.width * 0.4; height: page.t.px(4); radius: 2
-                color: tile.p.text; opacity: 0.6
-              }
-              Rectangle {
-                x: page.t.px(8); anchors.bottom: parent.bottom; anchors.bottomMargin: page.t.px(8)
-                width: page.t.px(10); height: width; radius: width / 2
-                color: tile.p.accent || page.t.themeAccent
-              }
-            }
-          }
+          Mini { id: tmini; width: parent.width; height: tiles.tileH; styleKey: tile.modelData.key; active: tile.base; focused: tile.activeFocus }
           JText {
-            anchors.top: mini.bottom
+            anchors.top: tmini.bottom
             anchors.topMargin: page.t.px(6)
             width: parent.width
             t: page.t
-            text: tile.modelData.label + (tile.active ? "  ✓" : "")
+            text: tile.modelData.label + (tile.active ? "  ✓" : tile.base ? "  ✓ + your colors" : "")
             size: 11.5
-            font.weight: tile.active ? Font.DemiBold : Font.Normal
-            color: tile.active ? page.t.text : page.t.textDim
+            font.weight: tile.base ? Font.DemiBold : Font.Normal
+            color: tile.base ? page.t.text : page.t.textDim
           }
           HoverHandler { cursorShape: Qt.PointingHandCursor }
           TapHandler { onTapped: page.t.setStyle(tile.modelData.key) }
         }
       }
+    }
+
+    // Yours
+    Grid {
+      id: mine
+      visible: page.styleTab === "mine"
+      width: parent.width
+      columns: 4
+      spacing: page.t.px(14)
+      readonly property real tileW: tiles.tileW
+      readonly property real tileH: tiles.tileH
+
+      // Save what's on screen now.
+      Item {
+        id: addTile
+        width: mine.tileW
+        height: mine.tileH + page.t.px(26)
+        activeFocusOnTab: page.styleTab === "mine"
+        Accessible.role: Accessible.Button
+        Accessible.name: "Save the current style and colors as a theme"
+        Keys.onPressed: function(e) { if (!page.naming && (e.key === Qt.Key_Space || e.key === Qt.Key_Return)) { page.naming = true; e.accepted = true } }
+        Rectangle {
+          id: addBox
+          width: parent.width
+          height: mine.tileH
+          radius: page.t.px(8)
+          color: addHover.hovered || page.naming ? page.t.inkA(0.06) : "transparent"
+          border.width: addTile.activeFocus ? page.t.px(2) : 1
+          border.color: addTile.activeFocus || page.naming ? page.t.accent : page.t.inkA(0.25)
+          Behavior on color { ColorAnimation { duration: Style.duration(120) } }
+          JText {
+            visible: !page.naming
+            anchors.centerIn: parent
+            t: page.t
+            text: "+  Save current"
+            size: 12
+            color: page.t.textDim
+          }
+          // Naming the theme, inline.
+          Column {
+            visible: page.naming
+            anchors.centerIn: parent
+            width: parent.width - page.t.px(20)
+            spacing: page.t.px(6)
+            Rectangle {
+              width: parent.width
+              height: page.t.px(30)
+              radius: page.t.radiusSmall
+              color: page.t.glassInset
+              border.width: 1
+              border.color: nameInput.activeFocus ? page.t.accent : page.t.border
+              TextInput {
+                id: nameInput
+                anchors.fill: parent
+                anchors.leftMargin: page.t.px(8)
+                anchors.rightMargin: page.t.px(8)
+                verticalAlignment: TextInput.AlignVCenter
+                color: page.t.text
+                font.family: page.t.font
+                font.pixelSize: page.t.px(12)
+                maximumLength: 30
+                clip: true
+                Accessible.role: Accessible.EditableText
+                Accessible.name: "Theme name"
+                function done(save) {
+                  if (save) page.t.saveCurrent(text)
+                  text = ""
+                  page.naming = false
+                }
+                Keys.onReturnPressed: done(true)
+                Keys.onEnterPressed: done(true)
+                Keys.onEscapePressed: done(false)
+                JText { anchors.fill: parent; visible: !nameInput.text.length; t: page.t; text: page.t.uniqueName(); size: 12; color: page.t.textFaint }
+              }
+            }
+            JText { t: page.t; width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "Enter to save · Esc to cancel"; size: 10; color: page.t.textFaint }
+          }
+          HoverHandler { id: addHover; cursorShape: page.naming ? Qt.IBeamCursor : Qt.PointingHandCursor }
+          TapHandler { enabled: !page.naming; onTapped: page.naming = true }
+        }
+        JText {
+          anchors.top: addBox.bottom
+          anchors.topMargin: page.t.px(6)
+          width: parent.width
+          t: page.t
+          text: "Current: " + page.t.styles.filter(function(x) { return x.key === page.t.style })[0].label + (Object.keys(page.t.custom || {}).length ? " + your colors" : "")
+          size: 11
+          color: page.t.textFaint
+        }
+      }
+      Connections {
+        target: page
+        function onNamingChanged() { if (page.naming) Qt.callLater(function() { nameInput.forceActiveFocus() }) }
+      }
+
+      Repeater {
+        model: page.t.saved
+        Item {
+          id: stile
+          required property var modelData
+          required property int index
+          readonly property bool active: page.t.activeSaved === index
+          property bool confirm: false
+          width: mine.tileW
+          height: mine.tileH + page.t.px(26)
+          activeFocusOnTab: page.styleTab === "mine"
+          Accessible.role: Accessible.RadioButton
+          Accessible.name: modelData.name + " theme"
+          Accessible.checked: active
+          Keys.onPressed: function(e) {
+            if (e.key === Qt.Key_Space || e.key === Qt.Key_Return) { page.t.applySaved(stile.index); e.accepted = true }
+            else if (e.key === Qt.Key_Delete) { if (stile.confirm) page.t.deleteSaved(stile.index); else stile.confirm = true; e.accepted = true }
+            else if (e.key === Qt.Key_Escape && stile.confirm) { stile.confirm = false; e.accepted = true }
+          }
+          onActiveFocusChanged: if (!activeFocus) confirm = false
+
+          Mini {
+            id: smini
+            width: parent.width
+            height: mine.tileH
+            styleKey: stile.modelData.style
+            colors: stile.modelData.colors
+            active: stile.active
+            focused: stile.activeFocus
+            TapHandler { enabled: !stile.confirm; onTapped: page.t.applySaved(stile.index) }
+            HoverHandler { id: sh; cursorShape: Qt.PointingHandCursor }
+
+            // Delete, in two steps.
+            Rectangle {
+              visible: (sh.hovered || stile.activeFocus) && !stile.confirm
+              anchors.top: parent.top
+              anchors.right: parent.right
+              anchors.margins: page.t.px(6)
+              width: page.t.px(22); height: width; radius: width / 2
+              color: Qt.rgba(0, 0, 0, 0.55)
+              JText { t: page.t; anchors.centerIn: parent; text: "×"; size: 13; color: "white" }
+              Accessible.role: Accessible.Button
+              Accessible.name: "Delete " + stile.modelData.name
+              TapHandler { onTapped: stile.confirm = true }
+            }
+            Rectangle {
+              visible: stile.confirm
+              anchors.fill: parent
+              radius: parent.radius
+              color: Qt.rgba(0, 0, 0, 0.72)
+              Column {
+                anchors.centerIn: parent
+                spacing: page.t.px(8)
+                JText { t: page.t; anchors.horizontalCenter: parent.horizontalCenter; text: "Delete “" + stile.modelData.name + "”?"; size: 11.5; color: "white" }
+                Row {
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  spacing: page.t.px(8)
+                  Rectangle {
+                    width: page.t.px(64); height: page.t.px(26); radius: page.t.px(6)
+                    color: page.t.red
+                    JText { t: page.t; anchors.centerIn: parent; text: "Delete"; size: 11; color: "white"; font.weight: Font.DemiBold }
+                    TapHandler { onTapped: page.t.deleteSaved(stile.index) }
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                  }
+                  Rectangle {
+                    width: page.t.px(64); height: page.t.px(26); radius: page.t.px(6)
+                    color: Qt.rgba(1, 1, 1, 0.15)
+                    JText { t: page.t; anchors.centerIn: parent; text: "Keep"; size: 11; color: "white" }
+                    TapHandler { onTapped: stile.confirm = false }
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                  }
+                }
+              }
+            }
+          }
+          JText {
+            anchors.top: smini.bottom
+            anchors.topMargin: page.t.px(6)
+            width: parent.width
+            t: page.t
+            text: stile.modelData.name + (stile.active ? "  ✓" : "")
+            size: 11.5
+            font.weight: stile.active ? Font.DemiBold : Font.Normal
+            color: stile.active ? page.t.text : page.t.textDim
+          }
+        }
+      }
+    }
+
+    JText {
+      visible: page.styleTab === "mine" && page.t.saved.length === 0 && !page.naming
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      width: parent.width * 0.7
+      horizontalAlignment: Text.AlignRight
+      wrapMode: Text.Wrap
+      elide: Text.ElideNone
+      t: page.t
+      text: "Pick a preset, change any colors below, then save it here to switch back to it any time."
+      size: 11
+      color: page.t.textFaint
     }
   }
 
@@ -358,8 +583,21 @@ Item {
     width: styleCard.width
     height: page.height - y
     title: "Colors"
-    action: Object.keys(page.t.custom || {}).length ? "Reset all" : ""
-    onActionClicked: page.t.resetColors()
+    action: Object.keys(page.t.custom || {}).length && page.t.activeSaved < 0 ? "Save as theme" : ""
+    onActionClicked: page.startSaving()
+    headerExtra: [
+      JText {
+        visible: Object.keys(page.t.custom || {}).length > 0
+        t: page.t
+        text: "Reset all"
+        size: 11.5
+        color: resetHover.hovered ? page.t.text : page.t.textFaint
+        Accessible.role: Accessible.Button
+        Accessible.name: "Reset all colors"
+        HoverHandler { id: resetHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler { onTapped: page.t.resetColors() }
+      }
+    ]
 
     readonly property var palettes: ({
       background: ["#0b0b0e", "#111318", "#1a1b26", "#1e1e2e", "#14092b", "#f2f0eb", "#e7e0d3", "#ffffff"],

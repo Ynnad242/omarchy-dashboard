@@ -1005,7 +1005,8 @@ Item {
           width: parent.width
           height: content.pageH
           shown: root.live && root.page === 3
-          settings: root.settings
+          // Demo mode never shows the real settings (your name, for one).
+          settings: root.demo ? ({}) : root.settings
           coach: doomCoach
           defaultName: root.defaultName
           onSetSetting: function(k, v) { root.setSetting(k, v) }
