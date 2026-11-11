@@ -159,6 +159,7 @@ Item {
   function complete() {
     if (!challenge) return
     challenge = null
+    closeNotification()
     slopMinutes = 0
     doneToday++
     doneDay = today()
@@ -188,11 +189,27 @@ Item {
   Process {
     id: notifier
     property var queue: []
-    stdout: SplitParser { onRead: function(line) { if (String(line).trim() === "open") coach.openRequested() } }
+    // -p prints the notification's id first, so finishing the set can close it.
+    property string lastId: ""
+    stdout: SplitParser { onRead: function(line) {
+      var s = String(line).trim()
+      if (/^\d+$/.test(s)) notifier.lastId = s
+      else if (s === "open") coach.openRequested()
+    } }
     onRunningChanged: if (!running && queue.length) { command = queue.shift(); running = true }
   }
+  // Take the challenge's notification off screen once it's done.
+  Process { id: closer }
+  function closeNotification() {
+    if (!notifier.lastId) return
+    closer.command = ["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications",
+                      "--object-path", "/org/freedesktop/Notifications",
+                      "--method", "org.freedesktop.Notifications.CloseNotification", notifier.lastId]
+    closer.running = true
+    notifier.lastId = ""
+  }
   function notify(title, body) {
-    var cmd = ["notify-send", "-a", "Jarvis", "-u", "normal", "-A", "open=Open Jarvis", title, body]
+    var cmd = ["notify-send", "-p", "-a", "Jarvis", "-u", "normal", "-A", "open=Open Jarvis", title, body]
     if (notifier.running) notifier.queue.push(cmd)
     else { notifier.command = cmd; notifier.running = true }
   }

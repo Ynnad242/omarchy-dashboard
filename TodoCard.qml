@@ -74,7 +74,7 @@ GlassCard {
       clip: true
       model: card.todos
       boundsBehavior: Flickable.StopAtBounds
-      spacing: card.t.px(2)
+      spacing: 0
 
       add: Transition {
         NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.duration(200); easing.type: Easing.OutCubic }
@@ -88,12 +88,22 @@ GlassCard {
         required property string due
         required property int index
         readonly property real e: card.ease(card.progress * 1.6 - index * 0.08)
+        // A ticked task shows its check for a moment, then leaves the list
+        // (it stays under Tasks > Done). Unticking brings it straight back.
+        property bool gone: false
+        Component.onCompleted: gone = done
+        onDoneChanged: if (done) goneTimer.restart(); else { goneTimer.stop(); gone = false }
+        Timer { id: goneTimer; interval: 650; onTriggered: row.gone = true }
         width: ListView.view.width
-        height: card.t.px(34)
+        height: gone ? 0 : card.t.px(36)
+        visible: height > 0.5
+        clip: true
+        Behavior on height { NumberAnimation { duration: Style.duration(220); easing.type: Easing.OutCubic } }
         radius: card.t.radiusSmall
         color: rowHover.hovered ? card.t.inkA(0.05) : "transparent"
         Behavior on color { ColorAnimation { duration: Style.duration(120) } }
-        opacity: e
+        opacity: gone ? 0 : e
+        Behavior on opacity { enabled: row.done; NumberAnimation { duration: Style.duration(180) } }
 
         Rectangle {
           id: box
@@ -165,10 +175,13 @@ GlassCard {
     }
 
     JText {
-      visible: card.total === 0
+      // Waits for the last ticked row to leave before fading in.
+      opacity: card.total - card.doneCount === 0 ? 1 : 0
+      visible: opacity > 0
+      Behavior on opacity { enabled: card.total - card.doneCount === 0; SequentialAnimation { PauseAnimation { duration: Style.duration(700) } NumberAnimation { duration: Style.duration(200) } } }
       anchors.centerIn: list
       t: card.t
-      text: "Nothing on your list.\nType below, or press T."
+      text: card.total === 0 ? "Nothing on your list.\nType below, or press T." : "All clear.\nType below to add more."
       horizontalAlignment: Text.AlignHCenter
       size: 11
       color: card.t.textFaint

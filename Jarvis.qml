@@ -512,7 +512,7 @@ Item {
   }
   function demoReply(q) {
     var s = String(q).toLowerCase()
-    var tail = "\n\n(Answered from the data on this computer. Claude isn't connected yet.)"
+    var tail = "\n\n(Answered from the data on this computer: Claude is switched off in Settings.)"
     if (/screen|time|hours|app/.test(s)) {
       var top = screenTime.topApps(3).map(function(a) { return a.name + " " + Math.round(a.minutes) + "m" })
       return "Screen time today: " + Math.round(screenTime.minutesToday()) + " min" + (top.length ? ", mostly " + top.join(", ") : "") + "." + tail
@@ -521,6 +521,31 @@ Item {
     return (open.length ? "Due today: " + open.join("; ") + "." : "Nothing's due today.") +
       (root.weather ? " It's " + root.weather.temp + "\u00b0 and " + String(root.weather.label).toLowerCase() + "." : "") +
       tail
+  }
+  // What Claude is told about the dashboard with each question. Kept short:
+  // tasks, screen time, weather, the watchlist and the exercise coach.
+  function claudeContext() {
+    var L = []
+    L.push("Name: " + root.userName + ". Now: " + Qt.formatDateTime(new Date(), "dddd d MMMM yyyy, " + theme.timeFmt) + ".")
+    var open = [], doneToday = 0
+    for (var i = 0; i < todoModel.count; i++) {
+      var r = todoModel.get(i)
+      if (!r.done) open.push(r.title + (r.due ? " (" + root.dueLabel(r.due).toLowerCase() + ")" : ""))
+      else if (r.doneAt && Qt.formatDate(new Date(r.doneAt), "yyyy-MM-dd") === root.isoDay(0)) doneToday++
+    }
+    L.push("Open tasks: " + (open.length ? open.slice(0, 15).join("; ") : "none") + ". Finished today: " + doneToday + ".")
+    if (!root.demo) {
+      var top = screenTime.topApps(5).map(function(a) { return a.name + " " + Math.round(a.minutes) + "m" })
+      L.push("Screen time today: " + Math.round(screenTime.minutesToday()) + " min" + (top.length ? " (" + top.join(", ") + ")" : "") + ".")
+    }
+    if (root.weather) L.push("Weather: " + root.weather.temp + "\u00b0" + (root.weather.unit || "") + ", " + root.weather.label +
+                             ", high " + root.weather.high + ", low " + root.weather.low + (root.weather.place ? ", in " + root.weather.place : "") + ".")
+    var q = root.watchlist.map(function(s) { var x = root.quotes[s]; return x && x.price != null ? s + " " + Number(x.price).toFixed(2) + " (" + (x.pct >= 0 ? "+" : "") + Number(x.pct || 0).toFixed(2) + "% today)" : null })
+      .filter(function(x) { return x })
+    if (q.length) L.push("Watchlist: " + q.join(", ") + ".")
+    if (doomCoach.challenge) L.push("Exercise coach: waiting on " + doomCoach.challenge.reps + " " + doomCoach.challenge.name + ".")
+    L.push("Not connected: email, calendar.")
+    return L.join("\n")
   }
   function openTodoTitles() {
     var out = []
@@ -623,6 +648,10 @@ Item {
         } else if (event.key === Qt.Key_T) {
           if (root.page === 1) tasksPage.focusInput()
           else { root.page = 0; todoCard.focusInput() }
+          event.accepted = true
+        } else if (event.key === Qt.Key_V) {
+          if (root.page !== 0) root.page = 0
+          chat.toggleVoice()
           event.accepted = true
         } else if (event.key === Qt.Key_S) {
           root.page = 2
@@ -1039,6 +1068,10 @@ Item {
           shown: root.live
           order: 12
           replyFor: function(q) { return root.demoReply(q) }
+          contextFor: function() { return root.claudeContext() }
+          claudeOn: root.settings.claude !== false
+          demo: root.demo
+          workDir: root.stateDir
           onEscaped: stage.forceActiveFocus()
         }
       }

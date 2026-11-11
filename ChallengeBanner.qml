@@ -4,17 +4,15 @@ import qs.Commons
 
 // The exercise the coach set, sitting in the header until it's done. Hold
 // "Done" for a second to mark it (so a stray click can't), swap it once for
-// something else, and get a short "nice" before the briefing comes back.
+// something else. Once it's done it simply goes away.
 Item {
   id: banner
 
   property var t
   property var coach
   readonly property var ch: coach ? coach.challenge : null
-  property bool celebrating: false
-  property int celebrateCount: 0
-  readonly property bool active: !!ch || celebrating
-  readonly property color tone: celebrating ? t.green : t.yellow
+  readonly property bool active: !!ch
+  readonly property color tone: t.yellow
 
   height: t.px(30)
   opacity: active ? 1 : 0
@@ -22,8 +20,6 @@ Item {
   scale: active ? 1 : 0.97
   Behavior on opacity { NumberAnimation { duration: Style.duration(220); easing.type: Easing.OutCubic } }
   Behavior on scale { NumberAnimation { duration: Style.duration(260); easing.type: Easing.Bezier; easing.bezierCurve: Style.easeOut } }
-
-  Timer { id: celebrateTimer; interval: 2600; onTriggered: banner.celebrating = false }
 
   // A slow breathing glow so it's noticed without being loud.
   RectangularShadow {
@@ -61,7 +57,7 @@ Item {
         id: chipText
         t: banner.t
         anchors.centerIn: parent
-        text: String.fromCodePoint(0xF01E5) + (banner.celebrating ? " DONE" : " MOVE")
+        text: String.fromCodePoint(0xF01E5) + " MOVE"
         size: 9.5
         font.weight: Font.Bold
         font.letterSpacing: 1
@@ -81,38 +77,28 @@ Item {
 
       JText {
         t: banner.t
-        visible: !banner.celebrating
         text: banner.ch ? banner.ch.reps + " " + banner.ch.unit : ""
         size: 12.5
         font.weight: Font.Bold
       }
       JText {
         t: banner.t
-        visible: !banner.celebrating
         text: banner.ch ? "·  " + banner.ch.minutes + " min on " + banner.ch.site : ""
         size: 10.5
         color: banner.t.textDim
       }
       JText {
         t: banner.t
-        visible: !banner.celebrating && !!banner.ch && banner.ch.tip.length > 0
+        visible: !!banner.ch && banner.ch.tip.length > 0
         text: banner.ch ? "·  " + banner.ch.tip : ""
         size: 10.5
         color: banner.t.textFaint
-      }
-      JText {
-        t: banner.t
-        visible: banner.celebrating
-        text: "Nice. " + banner.celebrateCount + (banner.celebrateCount === 1 ? " set" : " sets") + " today. Back to it."
-        size: 12
-        font.weight: Font.DemiBold
-        color: banner.t.green
       }
     }
 
     Row {
       id: actions
-      visible: !banner.celebrating && !!banner.ch
+      visible: !!banner.ch
       anchors.right: parent.right
       anchors.rightMargin: banner.t.px(4)
       anchors.verticalCenter: parent.verticalCenter
@@ -168,9 +154,6 @@ Item {
           duration: 1000
           onFinished: if (done.hold >= 1) {
             banner.coach.complete()
-            banner.celebrateCount = banner.coach.doneToday
-            banner.celebrating = true
-            celebrateTimer.restart()
             done.hold = 0
           }
         }

@@ -178,7 +178,7 @@ Item {
           width: parent.width
           wrapMode: Text.Wrap
           elide: Text.ElideNone
-          text: "Everything Jarvis records stays on this computer, in ~/.local/state/jarvis and ~/.config/jarvis. Nothing is uploaded. These online services are only asked for data while workspace 1 is on screen:"
+          text: "Everything Jarvis records stays on this computer, in ~/.local/state/jarvis and ~/.config/jarvis. These online services are only asked for data while workspace 1 is on screen, and Claude only when you ask it something:"
           size: 11.5
           color: page.t.textDim
           lineHeight: 1.2
@@ -198,6 +198,11 @@ Item {
           label: "Air purifier"
           hint: "Govee cloud: your API key and device state"
           JToggle { t: page.t; on: page.settings.goveeCloud !== false; Accessible.name: "Air purifier through Govee cloud"; onFlipped: function(v) { page.setSetting("goveeCloud", v) } }
+        }
+        Row2 {
+          label: "Ask Claude"
+          hint: "Anthropic, via Claude Code: your question, this chat, a dashboard summary"
+          JToggle { t: page.t; on: page.settings.claude !== false; Accessible.name: "Answer questions with Claude"; onFlipped: function(v) { page.setSetting("claude", v) } }
         }
         Item { width: 1; height: page.t.px(6) }
 

@@ -2,7 +2,8 @@
 
 A home screen for [Omarchy](https://omarchy.org) that lives on workspace 1:
 screen time, tasks, live stocks, weather, Govee lamps and air purifier,
-Discord, and an exercise coach that nudges you off doomscrolling. It runs
+Discord, an exercise coach that nudges you off doomscrolling, and a bar along
+the bottom for asking Claude, by typing or by voice. It runs
 inside the Omarchy shell as the `ynnad.jarvis` plugin.
 
 ![Jarvis home screen](docs/home-flat.png)
@@ -23,8 +24,7 @@ theme changes) and **Discord** (Discord's dark theme, embeds and all).
 Screenshots use made-up demo data.
 
 **Not finished yet**, and labeled as such on screen: the email card ("Gmail
-isn't linked yet"), the calendar (only tasks show on Today) and the chat bar, which answers from your local data with a
-note that Claude isn't connected.
+isn't linked yet") and the calendar (only tasks show on Today).
 
 ## Install
 
@@ -72,6 +72,16 @@ strip needs the [ynnad.discord-stream](https://github.com/Ynnad242/omarchy-disco
 overlay, which shares its voice state with Jarvis; that overlay also hides its
 floating widgets while Jarvis is on screen.
 
+**Ask Claude** (typing or voice): needs [Claude Code](https://claude.com/claude-code)
+installed and signed in once (run `claude`); Jarvis uses that login, so there's
+no API key to set up. Claude runs with every tool switched off, so it can only
+answer, not act. For voice, install Omarchy's dictation tool:
+```bash
+omarchy install dictation voxtype
+```
+Speech is turned into text on your computer; the recording is kept in memory
+and deleted straight after.
+
 **Exercise coach**: on by default. After 15 minutes on YouTube, TikTok,
 Instagram, Reddit, X, Facebook, Twitch or Snapchat you get one notification and
 a short upper-body set to do; nothing is ever locked. Change or switch it off
@@ -84,7 +94,8 @@ in Settings, or edit the site and app lists in `~/.config/jarvis/coach.json`.
 | Super+1, or your shortcut | Go to Jarvis |
 | 1 2 3 4 | Home, Tasks, Stocks, Settings |
 | Esc | Back to Home |
-| / | Ask Jarvis |
+| / | Type a question for Claude |
+| V | Ask by voice (press again to send) |
 | T | Add a task |
 | S | Search stocks |
 | Tab, Space, arrows | Move between and change controls in Settings |
@@ -97,8 +108,9 @@ any time. Saved themes stay on your computer.
 
 ## Privacy
 
-Everything Jarvis records stays on this computer. Nothing is uploaded, there
-is no account, no analytics and no tracking.
+Everything Jarvis records stays on this computer. There is no Jarvis account,
+no analytics and no tracking; the only things sent anywhere are listed under
+online services below.
 
 **Stored locally**
 
@@ -122,8 +134,8 @@ are recorded by their window title, which is the game's name.
   through `$XDG_RUNTIME_DIR/discord-voice.json` (memory only).
 - CPU, memory and disk usage from `/proc` and `df`.
 
-**Online services** (only while workspace 1 is on screen; each can be switched
-off in Settings)
+**Online services** (only while workspace 1 is on screen, and Claude only when
+you ask it something; each can be switched off in Settings)
 
 | Service | Sent | Why |
 |---|---|---|
@@ -131,6 +143,7 @@ off in Settings)
 | Open-Meteo (`api.open-meteo.com`) | Rough coordinates | Weather. |
 | geo.omarchy.org | Your IP address (as with any request) | Your rough location, if none is saved in Omarchy's weather settings. Same source as Omarchy's weather panel. |
 | Govee cloud (`openapi.api.govee.com`) | Your API key, device IDs, commands | The air purifier. Lamps use the local network only. |
+| Anthropic, through Claude Code | Your question, the last few turns of the chat, and a short summary of the dashboard (your name, open tasks, today's screen time and top apps, weather, watchlist prices) | Answers in the bar along the bottom. Only when you ask something. Your Claude Code account's terms apply. |
 
 **Delete your data**: Settings → Privacy & data → hold "Erase" removes screen
 time, coach history and caches. To remove everything, delete

@@ -54,7 +54,7 @@ Item {
       case "today": return !row.done && (st === "today" || st === "overdue")
       case "upcoming": return !row.done && st !== "today" && st !== "overdue"
       case "done": return row.done
-      default: return true
+      default: return !row.done
     }
   }
   function count(fn) {
@@ -198,7 +198,13 @@ Item {
           required property bool done
           required property string due
           required property int index
-          readonly property bool show: { page.rev; return page.passes({ done: done, due: due }) }
+          // A ticked task stays a moment to show its check, then leaves the
+          // open lists; it lives under Done.
+          property bool gone: false
+          Component.onCompleted: gone = done
+          onDoneChanged: if (done) goneTimer.restart(); else { goneTimer.stop(); gone = false }
+          Timer { id: goneTimer; interval: 650; onTriggered: row.gone = true }
+          readonly property bool show: { page.rev; return page.passes({ done: row.gone, due: due }) }
           readonly property string st: page.dueState(due)
           readonly property real e: listCard.ease(listCard.progress * 1.6 - index * 0.04)
           property bool editing: false
