@@ -89,12 +89,16 @@ GlassCard {
         readonly property real slot: card.bars.length > 0 ? width / card.bars.length : width
         readonly property real barW: Math.min(slot * 0.56, card.t.px(46))
 
+        // A count, not the array: screen time sends a fresh array every few
+        // seconds, and an array model would rebuild the bars (replaying their
+        // grow-in) each time. With a count they stay and just tween to the
+        // new height. They're rebuilt only when Day/Week/Month changes.
         Repeater {
-          model: card.bars
+          model: card.bars.length
           Item {
             id: col
-            required property var modelData
             required property int index
+            readonly property var modelData: card.bars[index] || ({ label: "", minutes: 0 })
             readonly property bool isCurrent: index === card.current
             readonly property bool isHover: index === card.hoverIndex
             property real minutes: modelData.minutes
@@ -215,11 +219,11 @@ GlassCard {
         spacing: card.t.px(12)
 
         Repeater {
-          model: card.apps
+          model: card.apps.length
           Item {
             id: app
-            required property var modelData
             required property int index
+            readonly property var modelData: card.apps[index] || ({ name: "", minutes: 0 })
             width: parent.width
             height: card.t.px(34)
             readonly property real share: modelData.minutes / Math.max(1, card.apps[0].minutes)

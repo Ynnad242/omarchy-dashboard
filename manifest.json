@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "ynnad.jarvis",
   "name": "Jarvis",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "author": "ynnad",
   "description": "A home screen that lives on workspace 1: screen time, tasks, live stocks, weather, Govee lamps and air purifier, Discord, and an exercise coach that nudges you off doomscrolling. Nine styles, plus your own.",
   "kinds": [
