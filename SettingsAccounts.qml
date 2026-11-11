@@ -46,7 +46,7 @@ Item {
     size: 11
     color: pane.t.accent
     font.underline: lkArea.containsMouse
-    MouseArea { id: lkArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Qt.openUrlExternally(lk.url) }
+    MouseArea { id: lkArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (/^https:\/\//.test(lk.url)) Qt.openUrlExternally(lk.url) }
   }
 
   // ---- AI assistant -----------------------------------------------------------
@@ -199,7 +199,7 @@ Item {
           }
           Row {
             spacing: pane.t.px(8)
-            SButton { t: pane.t; label: "Open inbox"; visible: !!pane.mail.web; onClicked: Qt.openUrlExternally(pane.mail.web) }
+            SButton { t: pane.t; label: "Open inbox"; visible: !!pane.app && pane.app.safeUrl(pane.mail.web); onClicked: Qt.openUrlExternally(pane.mail.web) }
             SButton { t: pane.t; label: "Sign out"; kind: "danger"; onClicked: if (pane.app) pane.app.signOutMail() }
           }
           Status {
@@ -255,10 +255,10 @@ Item {
               id: mailGo
               t: pane.t
               kind: "primary"
-              label: "Sign in"
               busy: pane.app && pane.app.mailLogin.busy
               busyLabel: "Checking…"
-              enabled: mailAddr.text.length > 3 && mailPass.text.length > 0 && !pane.demo
+              enabled: mailAddr.text.length > 3 && mailPass.text.length > 0 && !pane.demo && pane.app.waitFor("mail") === 0
+              label: pane.app && pane.app.waitFor("mail") > 0 ? "Try again in " + pane.app.waitFor("mail") + "s" : "Sign in"
               onClicked: {
                 if (!pane.app) return
                 pane.app.signInMail({ provider: pane.mailProvider, address: mailAddr.text.trim(), password: mailPass.text,
@@ -372,7 +372,7 @@ Item {
             label: "Save"
             busy: pane.app && pane.app.goveeKey.busy
             busyLabel: "Checking…"
-            enabled: gKey.text.trim().length > 7 && !pane.demo
+            enabled: gKey.text.trim().length > 7 && !pane.demo && pane.app.waitFor("govee") === 0
             onClicked: if (pane.app) pane.app.saveGoveeKey(gKey.text)
           }
         }

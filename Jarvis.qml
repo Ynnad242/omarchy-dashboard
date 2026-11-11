@@ -171,6 +171,7 @@ Item {
       if (!w || !w.workspace || w.workspace.id === 1 || !w.address) return
       var address = String(w.address)
       if (address.indexOf("0x") !== 0) address = "0x" + address
+      if (!/^0x[0-9a-fA-F]+$/.test(address)) return
       Hyprland.dispatch('hl.dsp.window.move({ workspace = "1", follow = false, window = "address:' + address + '" })')
     }
   }
@@ -190,6 +191,12 @@ Item {
   // editing files: AI sign-in uses Omarchy's own account manager, email keeps
   // its app password in the system keyring, the Govee key is checked before
   // it's saved, and the firewall rule asks for your password through polkit.
+  // Keep Jarvis's folders readable only by you (they hold your tasks, screen
+  // time and settings), even on a computer shared with others.
+  Process {
+    running: !root.demo
+    command: ["sh", "-c", "mkdir -p \"$0\" \"$1\" && chmod 700 \"$0\" \"$1\"", root.stateDir, root.configDir]
+  }
   function script(name) { return Qt.resolvedUrl(name).toString().replace(/^(file|qs):\/\//, "") }
 
   // Which assistant answers in the bar: "claude", "codex" or "off".
@@ -230,6 +237,7 @@ Item {
   // Opens Omarchy's sign-in in a small terminal; we look again every few
   // seconds until it's done (or three minutes pass).
   function signInAgent(provider) {
+    if (provider !== "claude" && provider !== "codex") return
     Quickshell.execDetached(["omarchy-launch-floating-terminal-with-presentation", "omarchy agent account add " + provider])
     root.signingInUntil = Date.now() + 180000
   }
@@ -261,14 +269,30 @@ Item {
         try {
           var m = JSON.parse(line)
           root.mailLogin = { busy: false, ok: m.ok === true, error: m.error || "" }
+          if (!m.ok) root.noteFailure("mail")
           if (m.ok && mailProc.running) mailProc.write("refresh\n")
         } catch (e) {}
       }
     }
     onExited: if (root.mailLogin.busy) root.mailLogin = { busy: false, ok: false, error: "sign-in stopped unexpectedly" }
   }
+  // After a failed attempt, wait a little before the next one; after five in
+  // ten minutes, wait a minute. Mail providers lock out fast retries.
+  property var attempts: ({ mail: [], govee: [] })
+  property real now2: Date.now()
+  Timer { interval: 1000; repeat: true; running: root.waitFor("mail") > 0 || root.waitFor("govee") > 0; onTriggered: root.now2 = Date.now() }
+  function noteFailure(kind) {
+    var a = {}; for (var k in root.attempts) a[k] = root.attempts[k]
+    a[kind] = (a[kind] || []).concat([Date.now()]).filter(function(t) { return Date.now() - t < 600000 })
+    root.attempts = a; root.now2 = Date.now()
+  }
+  function waitFor(kind) {
+    var list = root.attempts[kind] || [], last = list.length ? list[list.length - 1] : 0
+    var gap = list.length >= 5 ? 60000 : list.length ? 5000 : 0
+    return Math.max(0, Math.ceil((last + gap - root.now2) / 1000))
+  }
   function signInMail(req) {
-    if (mailLoginProc.running) return
+    if (mailLoginProc.running || root.waitFor("mail") > 0) return
     root.mailLogin = { busy: true, ok: false, error: "" }
     mailLoginProc.running = true
     mailLoginProc.write(JSON.stringify(req) + "\n")
@@ -281,9 +305,11 @@ Item {
   function signOutMail() { mailLogoutProc.running = true }
   // The inbox in the browser once email is set up; Settings > Accounts before.
   function openMail() {
-    if (root.mail.status === "ok" && root.mail.web) Qt.openUrlExternally(root.mail.web)
+    if (root.mail.status === "ok" && root.safeUrl(root.mail.web)) Qt.openUrlExternally(root.mail.web)
     else root.openAccounts()
   }
+  // Links Jarvis opens are https pages only (never file:// or other schemes).
+  function safeUrl(u) { return /^https:\/\/[A-Za-z0-9.-]+(\/[^\s]*)?$/.test(String(u || "")) }
   function openAccounts() { root.page = 3; settingsPage.tab = "accounts" }
   // Rows for the inbox card.
   readonly property var mailRows: (root.mail.mails || []).map(function(m) {
@@ -301,13 +327,14 @@ Item {
         try {
           var m = JSON.parse(line)
           root.goveeKey = { busy: false, ok: m.ok === true, error: m.error || "" }
+          if (!m.ok) root.noteFailure("govee")
           if (m.ok) root.restartGovee()
         } catch (e) {}
       }
     }
   }
   function saveGoveeKey(key) {
-    if (goveeKeyProc.running) return
+    if (goveeKeyProc.running || root.waitFor("govee") > 0) return
     root.goveeKey = { busy: true, ok: false, error: "" }
     goveeKeyProc.running = true
     goveeKeyProc.write(JSON.stringify({ apiKey: String(key || "").trim() }) + "\n")
@@ -962,16 +989,6 @@ Item {
             opacity: challengeBanner.active ? 0 : 1
             visible: opacity > 0.01
             Behavior on opacity { NumberAnimation { duration: Style.duration(180); easing.type: Easing.OutCubic } }
-            Rectangle {
-              visible: false
-              height: theme.px(22)
-              width: 0
-              radius: height / 2
-              color: theme.alpha(theme.accent, 0.16)
-              border.width: 1
-              border.color: theme.alpha(theme.accent, 0.4)
-              JText { id: tag; t: theme; anchors.centerIn: parent; text: String.fromCodePoint(0xF0674) + " JARVIS"; size: 9.5; font.weight: Font.Bold; color: theme.accent; font.letterSpacing: 1 }
-            }
             JText {
               t: theme
               height: theme.px(22)

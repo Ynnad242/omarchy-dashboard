@@ -172,7 +172,31 @@ only when you ask it something; each can be switched off in Settings)
 time, coach history and caches. To remove everything, delete
 `~/.local/state/jarvis` and `~/.config/jarvis`.
 
-## Accessibility
+## Security
+
+- **No secrets in files you'd share.** The email password lives in your system
+  keyring; the Govee key in `~/.config/jarvis/govee.json`, readable only by
+  you; Jarvis's folders are private to you (`chmod 700`). Nothing secret is
+  in this repository or its history.
+- **Nothing you type reaches a shell.** Questions, addresses and keys go to the
+  helpers as arguments or on stdin, never pasted into a command line. Text from
+  outside (email, Discord, stock names) is always shown as plain text.
+- **No server.** Jarvis listens on nothing except UDP 4002 for your lamps'
+  replies, and only accepts those from private addresses, about the sender
+  itself, up to 32 lamps.
+- **Everything online uses HTTPS** (IMAP over TLS), with size limits on
+  replies and timeouts. Purifier commands are spaced out, and sign-in retries
+  back off after a failure so your mail provider doesn't lock you out.
+- **The AI can't act.** Claude runs with every tool switched off; Codex runs
+  in a read-only sandbox in an empty folder. They get only the summary listed
+  under Privacy, never your email.
+- **Links** Jarvis opens are `https://` pages only.
+- Like any shell plugin, Jarvis's functions can be called by other programs
+  running as you (`omarchy-shell shell call`); those programs could already
+  read and change your files, so this isn't a boundary.
+
+Found a problem? Open an issue on GitHub.
+
 
 With each style's default colors, text meets WCAG AA contrast (4.5:1) on cards; controls in
 Settings work from the keyboard, and controls carry names for screen readers.

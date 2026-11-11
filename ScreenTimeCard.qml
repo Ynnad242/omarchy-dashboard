@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import qs.Commons
 
 // The big chart: screen time per hour, day or week with the current one lit
@@ -131,15 +130,6 @@ GlassCard {
 
             readonly property real entrance: card.ease((card.progress * 1.5) - col.index * 0.05)
             readonly property real barH: (col.future ? lane.barW * 0.9 : Math.max(lane.barW * 0.5, lane.height * col.minutes / card.maxMinutes)) * col.entrance * col.grow
-
-            RectangularShadow {
-              visible: false
-              anchors.fill: bar
-              radius: bar.radius
-              blur: card.t.px(26)
-              color: card.t.alpha(card.t.accent, 0.55)
-              opacity: col.entrance
-            }
 
             Rectangle {
               id: bar

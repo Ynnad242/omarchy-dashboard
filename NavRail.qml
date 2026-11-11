@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import qs.Commons
 
 // The floating icon rail on the left. Picking a section spotlights its cards
@@ -53,14 +52,6 @@ Item {
     border.width: 0
     InsetShade { t: rail.t }
     Behavior on y { NumberAnimation { duration: Style.duration(240); easing.type: Easing.Bezier; easing.bezierCurve: Style.easeOut } }
-  }
-  RectangularShadow {
-    visible: false
-    anchors.fill: highlight
-    radius: highlight.radius
-    blur: rail.t.px(16)
-    color: rail.t.alpha(rail.t.accent, 0.4)
-    z: -1
   }
 
   Column {

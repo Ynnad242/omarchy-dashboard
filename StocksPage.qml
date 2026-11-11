@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import qs.Commons
 
 // The Stocks page: search and your watchlist on the left, a big live chart of

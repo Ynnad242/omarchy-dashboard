@@ -221,7 +221,7 @@ def fetch(c, password):
 def state(c, **kw):
     p = PROVIDERS.get(c.get("provider") or "other", PROVIDERS["other"]) if c else PROVIDERS["other"]
     base = {"type": "mail", "provider": (c or {}).get("provider", ""), "providerName": p["name"],
-            "address": (c or {}).get("address", ""), "web": (c or {}).get("web") or p["web"], "at": int(time.time())}
+            "address": (c or {}).get("address", ""), "web": p["web"], "at": int(time.time())}
     base.update(kw)
     return base
 

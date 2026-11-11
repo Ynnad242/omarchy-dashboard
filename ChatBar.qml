@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Shapes
-import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import qs.Commons
@@ -387,17 +386,6 @@ Item {
     Behavior on color { ColorAnimation { duration: Style.duration(160) } }
     Behavior on border.color { ColorAnimation { duration: Style.duration(160) } }
 
-    RectangularShadow {
-      visible: false
-      anchors.fill: parent
-      z: -1
-      radius: parent.radius
-      blur: bar.t.px(30)
-      color: bar.t.alpha(bar.t.accent, 0.28)
-      opacity: input.activeFocus ? 1 : 0
-      Behavior on opacity { NumberAnimation { duration: Style.duration(200) } }
-    }
-
     // The orb
     Item {
       id: orb
@@ -406,41 +394,6 @@ Item {
       width: parent.height - bar.t.px(16)
       height: width
 
-      Rectangle {
-        anchors.centerIn: parent
-        width: parent.width * 1.5; height: width; radius: width / 2
-        visible: false
-        gradient: Gradient {
-          orientation: Gradient.Vertical
-          GradientStop { position: 0; color: bar.t.alpha(bar.t.accent, 0.0) }
-          GradientStop { position: 0.5; color: bar.t.alpha(bar.t.accent, 0.10) }
-          GradientStop { position: 1; color: bar.t.alpha(bar.t.accent, 0.0) }
-        }
-      }
-      Rectangle {
-        id: core
-        visible: false
-        anchors.centerIn: parent
-        width: parent.width * 0.62; height: width; radius: width / 2
-        gradient: Gradient {
-          GradientStop { position: 0; color: Qt.lighter(bar.t.accent, 1.35) }
-          GradientStop { position: 1; color: bar.t.magenta }
-        }
-        SequentialAnimation on scale {
-          running: bar.shown
-          loops: Animation.Infinite
-          NumberAnimation { from: 0.9; to: 1.05; duration: bar.thinking ? 420 : 1800; easing.type: Easing.InOutSine }
-          NumberAnimation { from: 1.05; to: 0.9; duration: bar.thinking ? 420 : 1800; easing.type: Easing.InOutSine }
-        }
-      }
-      RectangularShadow {
-        visible: false
-        anchors.fill: core
-        radius: core.radius
-        blur: bar.t.px(14)
-        color: bar.t.alpha(bar.t.accent, 0.7)
-        z: -1
-      }
       Shape {
         id: arc
         anchors.fill: parent

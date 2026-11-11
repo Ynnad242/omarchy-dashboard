@@ -120,9 +120,27 @@ class Lan:
         except (ValueError, KeyError, TypeError, AttributeError):
             return False
         ip = addr[0]
+        # Only trust replies from a private address, about that same address,
+        # and keep the table small: a device on the network can't point Jarvis
+        # at some other host or flood the list.
+        try:
+            import ipaddress
+            if not ipaddress.ip_address(ip).is_private:
+                return False
+        except ValueError:
+            return False
+        if not isinstance(d, dict) or (cmd == "scan" and str(d.get("ip") or ip) != ip):
+            return False
+        if ip not in self.lights and len(self.lights) >= 32:
+            return False
+        try:
+            return self._fold(cmd, d, ip)
+        except (ValueError, TypeError, AttributeError):
+            return False
+
+    def _fold(self, cmd, d, ip):
         with self.lock:
             if cmd == "scan":
-                ip = str(d.get("ip") or ip)
                 light = self.lights.setdefault(ip, {"ip": ip})
                 light["sku"] = str(d.get("sku", ""))[:16]
                 light["device"] = str(d.get("device", ""))[:64]
@@ -370,8 +388,16 @@ def serve():
             dirty.set()
             time.sleep(poll)
 
+    last_control = [0.0]
+
     def cloud_control(c):
+        # Space purifier commands at least 1.2 s apart, so clicking through the
+        # modes can't run into Govee's rate limit.
         with cloud_lock:
+            wait = last_control[0] + 1.2 - time.time()
+            if wait > 0:
+                time.sleep(wait)
+            last_control[0] = time.time()
             try:
                 cloud.control(c)
                 cloud.error = ""

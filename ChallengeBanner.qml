@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import qs.Commons
 
 // The exercise the coach set, sitting in the header until it's done. Hold
@@ -20,21 +19,6 @@ Item {
   scale: active ? 1 : 0.97
   Behavior on opacity { NumberAnimation { duration: Style.duration(220); easing.type: Easing.OutCubic } }
   Behavior on scale { NumberAnimation { duration: Style.duration(260); easing.type: Easing.Bezier; easing.bezierCurve: Style.easeOut } }
-
-  // A slow breathing glow so it's noticed without being loud.
-  RectangularShadow {
-    visible: false
-    anchors.fill: pill
-    radius: pill.radius
-    blur: banner.t.px(22)
-    color: banner.t.alpha(banner.tone, 0.45)
-    SequentialAnimation on opacity {
-      running: banner.visible && !!banner.ch
-      loops: Animation.Infinite
-      NumberAnimation { from: 0.25; to: 0.8; duration: 1600; easing.type: Easing.InOutSine }
-      NumberAnimation { from: 0.8; to: 0.25; duration: 1600; easing.type: Easing.InOutSine }
-    }
-  }
 
   Rectangle {
     id: pill

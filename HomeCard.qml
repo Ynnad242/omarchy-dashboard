@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import qs.Commons
 
 // Home: each Govee lamp (over the LAN) on its own row with a toggle and a
@@ -156,17 +155,6 @@ GlassCard {
       x: card.t.px(6)
       width: card.t.px(28); height: width
       anchors.verticalCenter: parent.verticalCenter
-      RectangularShadow {
-        visible: false
-        anchors.fill: orbCore
-        radius: orbCore.radius
-        blur: card.t.px(18)
-        spread: card.t.px(1)
-        color: row.tint
-        opacity: row.on ? 0.25 + 0.6 * slider.shown / 100 : 0
-        Behavior on opacity { NumberAnimation { duration: Style.duration(260); easing.type: Easing.OutCubic } }
-        Behavior on color { ColorAnimation { duration: Style.duration(260) } }
-      }
       Rectangle {
         id: orbCore
         anchors.fill: parent
