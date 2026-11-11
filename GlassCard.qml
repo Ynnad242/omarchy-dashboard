@@ -49,11 +49,13 @@ Item {
 
   SequentialAnimation {
     id: enter
-    ScriptAction { script: { card.opacity = 0; card.rise = card.t.px(8); card.progress = 0 } }
-    PauseAnimation { duration: Style.duration(card.order * 30) }
+    // GSAP-style entrance: from({ y: 16, opacity: 0, stagger: 0.045,
+    // ease: "power3.out" }), so the page settles in a gentle wave.
+    ScriptAction { script: { card.opacity = 0; card.rise = card.t.px(16); card.progress = 0 } }
+    PauseAnimation { duration: Style.duration(card.order * 45) }
     ParallelAnimation {
-      NumberAnimation { target: card; property: "opacity"; to: 1; duration: Style.duration(220); easing.type: Easing.OutCubic }
-      NumberAnimation { target: card; property: "rise"; to: 0; duration: Style.duration(260); easing.type: Easing.Bezier; easing.bezierCurve: Style.easeOut }
+      NumberAnimation { target: card; property: "opacity"; to: 1; duration: Style.duration(420); easing.type: Easing.OutQuart }
+      NumberAnimation { target: card; property: "rise"; to: 0; duration: Style.duration(650); easing.type: Easing.OutQuart }
       SequentialAnimation {
         PauseAnimation { duration: Style.duration(60) }
         NumberAnimation { target: card; property: "progress"; to: 1; duration: Style.duration(700) }

@@ -1,10 +1,13 @@
 import QtQuick
 import qs.Commons
+import "Charts.js" as Charts
 
-// The big price chart: a line with a soft fill, the starting price as a
-// dashed baseline, price labels on the right, times along the bottom, and a
-// crosshair that follows the pointer with the price and time under it. It
-// draws itself in left to right whenever new data arrives.
+// The big price chart, Bklit-style: a smooth line over a fill that fades
+// toward the bottom and out at the left edge, dashed guides, the starting
+// price as a dashed baseline, prices on the right and times along the bottom.
+// Hovering shows a crosshair that fades at its ends, a ringed dot on the line,
+// the time in a pill on the axis and the price beside it. It draws itself in,
+// left to right, whenever the stock or range changes.
 Item {
   id: chart
 
@@ -65,8 +68,8 @@ Item {
     target: chart
     property: "reveal"
     from: 0; to: 1
-    duration: Style.duration(700)
-    easing.type: Easing.OutCubic
+    duration: Style.duration(1100)
+    easing.type: Easing.OutQuart   // GSAP's power3.out
   }
 
   // Price grid and labels
@@ -77,7 +80,6 @@ Item {
       readonly property real v: chart.bounds.lo + (chart.bounds.hi - chart.bounds.lo) * (index + 0.5) / 5
       y: chart.yAt(v)
       width: chart.width
-      Rectangle { width: chart.width - chart.padR; height: 1; color: chart.t.inkA(0.045) }
       JText {
         t: chart.t
         x: chart.width - chart.padR + chart.t.px(10)
@@ -116,6 +118,11 @@ Item {
       var reach = (chart.width - chart.padR) * chart.reveal
       var c = chart.tone
       var bottom = chart.height - chart.padB
+      var right = chart.width - chart.padR
+
+      // Dashed guides at the price labels.
+      for (var gi = 0; gi < 5; gi++)
+        Charts.dashed(ctx, 0, right, chart.yAt(chart.bounds.lo + (chart.bounds.hi - chart.bounds.lo) * (gi + 0.5) / 5), chart.t.inkA(0.08))
 
       // Baseline (start / previous close), dashed.
       if (chart.base > 0) {
@@ -128,35 +135,23 @@ Item {
         ctx.restore()
       }
 
+      var xs = [], ys = []
+      for (var i = 0; i < p.length; i++) { xs.push(chart.xAt(i)); ys.push(chart.yAt(p[i][1])) }
+
+      // The line and its fill, drawn into a layer of their own so the left
+      // edge can fade without touching the guides.
       ctx.save()
       ctx.beginPath(); ctx.rect(0, 0, reach, chart.height); ctx.clip()
-
-      var fill = ctx.createLinearGradient(0, chart.padT, 0, bottom)
-      fill.addColorStop(0, Qt.rgba(c.r, c.g, c.b, 0.12))
-      fill.addColorStop(1, Qt.rgba(c.r, c.g, c.b, 0.0))
-      ctx.beginPath()
-      ctx.moveTo(chart.xAt(0), chart.yAt(p[0][1]))
-      for (var i = 1; i < p.length; i++) ctx.lineTo(chart.xAt(i), chart.yAt(p[i][1]))
-      ctx.lineTo(chart.xAt(p.length - 1), bottom)
-      ctx.lineTo(chart.xAt(0), bottom)
-      ctx.closePath()
-      ctx.fillStyle = fill
-      ctx.fill()
-
-      ctx.beginPath()
-      ctx.moveTo(chart.xAt(0), chart.yAt(p[0][1]))
-      for (var j = 1; j < p.length; j++) ctx.lineTo(chart.xAt(j), chart.yAt(p[j][1]))
-      ctx.lineWidth = Math.max(1.5, chart.t.px(2))
-      ctx.lineJoin = "round"
-      ctx.strokeStyle = c
-      ctx.stroke()
+      Charts.area(ctx, xs, ys, bottom, c, Math.max(1.5, chart.t.px(2)), 0.26)
       ctx.restore()
+      Charts.fadeEdges(ctx, right, chart.height, 0.04, false)
 
+      // The latest price: a dot with a soft halo, once the line has arrived.
       if (chart.reveal >= 1) {
-        var lx = chart.xAt(p.length - 1), ly = chart.yAt(p[p.length - 1][1])
-        ctx.beginPath(); ctx.arc(lx, ly, chart.t.px(7), 0, Math.PI * 2)
-        ctx.fillStyle = Qt.rgba(c.r, c.g, c.b, 0.0); ctx.fill()
-        ctx.beginPath(); ctx.arc(lx, ly, chart.t.px(3), 0, Math.PI * 2)
+        var lx = xs[xs.length - 1], ly = ys[ys.length - 1]
+        ctx.beginPath(); ctx.arc(lx, ly, chart.t.px(8), 0, Math.PI * 2)
+        ctx.fillStyle = Qt.rgba(c.r, c.g, c.b, 0.18); ctx.fill()
+        ctx.beginPath(); ctx.arc(lx, ly, chart.t.px(3.5), 0, Math.PI * 2)
         ctx.fillStyle = c; ctx.fill()
       }
     }
@@ -169,13 +164,46 @@ Item {
     readonly property real py: visible ? chart.yAt(chart.points[chart.hoverIndex][1]) : 0
     anchors.fill: parent
 
-    Rectangle { x: parent.px; y: chart.padT; width: 1; height: chart.height - chart.padT - chart.padB; color: chart.t.inkA(0.25) }
-    Rectangle { x: 0; y: parent.py; width: chart.width - chart.padR; height: 1; color: chart.t.inkA(0.12) }
+    // A vertical line that fades out at both ends.
+    Rectangle {
+      x: Math.round(parent.px); y: chart.padT; width: 1; height: chart.height - chart.padT - chart.padB
+      gradient: Gradient {
+        GradientStop { position: 0.0; color: chart.t.inkA(0) }
+        GradientStop { position: 0.25; color: chart.t.inkA(0.35) }
+        GradientStop { position: 0.75; color: chart.t.inkA(0.35) }
+        GradientStop { position: 1.0; color: chart.t.inkA(0) }
+      }
+    }
+    // A ringed dot on the line.
     Rectangle {
       x: parent.px - width / 2; y: parent.py - height / 2
-      width: chart.t.px(10); height: width; radius: width / 2
-      color: chart.tone
-      border.width: 2; border.color: "white"
+      width: chart.t.px(18); height: width; radius: width / 2
+      color: chart.t.alpha(chart.tone, 0.2)
+      Rectangle {
+        anchors.centerIn: parent
+        width: chart.t.px(9); height: width; radius: width / 2
+        color: chart.tone
+        border.width: chart.t.px(2); border.color: chart.t.base
+      }
+    }
+    // The time, in a pill on the axis.
+    Rectangle {
+      x: Math.max(0, Math.min(chart.width - chart.padR - width, parent.px - width / 2))
+      y: chart.height - chart.padB + chart.t.px(4)
+      width: pillText.implicitWidth + chart.t.px(16)
+      height: chart.t.px(20)
+      radius: height / 2
+      color: chart.t.text
+      z: 2
+      JText {
+        id: pillText
+        t: chart.t
+        anchors.centerIn: parent
+        text: chart.hoverIndex >= 0 && chart.hoverIndex < chart.points.length ? chart.timeLabel(chart.points[chart.hoverIndex][0], true) : ""
+        size: 9.5
+        font.weight: Font.DemiBold
+        color: chart.t.base
+      }
     }
     Rectangle {
       readonly property bool flip: parent.px > (chart.width - chart.padR) * 0.7
@@ -183,10 +211,10 @@ Item {
       y: Math.max(chart.padT, Math.min(chart.height - chart.padB - height, parent.py - height - chart.t.px(10)))
       width: tipCol.implicitWidth + chart.t.px(20)
       height: tipCol.implicitHeight + chart.t.px(12)
-      radius: chart.t.px(8)
+      radius: chart.t.px(10)
       color: chart.t.raised
       border.width: 1
-      border.color: chart.t.alpha(chart.tone, 0.5)
+      border.color: chart.t.inkA(0.12)
       Column {
         id: tipCol
         anchors.centerIn: parent
@@ -200,7 +228,7 @@ Item {
         JText {
           t: chart.t
           readonly property real d: chart.hoverIndex >= 0 && chart.hoverIndex < chart.points.length && chart.base > 0 ? (chart.points[chart.hoverIndex][1] - chart.base) / chart.base * 100 : 0
-          text: (d >= 0 ? "+" : "") + d.toFixed(2) + "%  ·  " + (chart.hoverIndex >= 0 && chart.hoverIndex < chart.points.length ? chart.timeLabel(chart.points[chart.hoverIndex][0], true) : "")
+          text: (d >= 0 ? "▲ +" : "▼ ") + d.toFixed(2) + "%" + (chart.base > 0 ? "  vs start" : "")
           size: 9.5
           color: d >= 0 ? chart.t.green : chart.t.red
         }

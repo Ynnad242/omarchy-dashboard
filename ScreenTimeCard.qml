@@ -71,11 +71,21 @@ GlassCard {
             size: 9.5
             color: card.t.textFaint
           }
-          Rectangle {
+          // Dashed guides; the baseline stays solid.
+          Canvas {
             x: plot.axisW
+            y: -1
             width: plot.width - plot.axisW
-            height: 1
-            color: card.t.inkA(index === 0 ? 0.10 : 0.045)
+            height: 2
+            readonly property color ink: card.t.inkA(index === 0 ? 0.12 : 0.08)
+            onInkChanged: requestPaint()
+            onWidthChanged: requestPaint()
+            onPaint: {
+              var ctx = getContext("2d"); ctx.reset()
+              ctx.strokeStyle = ink; ctx.lineWidth = 1
+              if (index > 0) ctx.setLineDash([2, 5])
+              ctx.beginPath(); ctx.moveTo(0, 1.5); ctx.lineTo(width, 1.5); ctx.stroke()
+            }
           }
         }
       }
@@ -101,6 +111,8 @@ GlassCard {
             readonly property var modelData: card.bars[index] || ({ label: "", minutes: 0 })
             readonly property bool isCurrent: index === card.current
             readonly property bool isHover: index === card.hoverIndex
+            // Days (or hours) still to come: drawn as a striped stub.
+            readonly property bool future: card.current >= 0 && index > card.current && modelData.minutes === 0
             property real minutes: modelData.minutes
             property real grow: 0
             Behavior on minutes { NumberAnimation { duration: Style.duration(320); easing.type: Easing.OutCubic } }
@@ -112,12 +124,13 @@ GlassCard {
             Component.onCompleted: growAnim.start()
             SequentialAnimation {
               id: growAnim
-              PauseAnimation { duration: Style.duration(col.index * 28) }
-              NumberAnimation { target: col; property: "grow"; to: 1; duration: Style.duration(520); easing.type: Easing.Bezier; easing.bezierCurve: Style.easeOut }
+              PauseAnimation { duration: Style.duration(col.index * 45) }
+              // GSAP-style: power3.out, staggered left to right.
+              NumberAnimation { target: col; property: "grow"; to: 1; duration: Style.duration(800); easing.type: Easing.OutQuart }
             }
 
             readonly property real entrance: card.ease((card.progress * 1.5) - col.index * 0.05)
-            readonly property real barH: Math.max(lane.barW * 0.5, lane.height * col.minutes / card.maxMinutes) * col.entrance * col.grow
+            readonly property real barH: (col.future ? lane.barW * 0.9 : Math.max(lane.barW * 0.5, lane.height * col.minutes / card.maxMinutes)) * col.entrance * col.grow
 
             RectangularShadow {
               visible: false
@@ -134,9 +147,26 @@ GlassCard {
               anchors.bottom: parent.bottom
               width: lane.barW
               height: col.barH
-              radius: card.t.px(3)
-              color: col.isCurrent ? card.t.accent : card.t.inkA(col.isHover ? 0.20 : 0.13)
+              // Pill bars, like Bklit's; square when the style has square corners.
+              radius: card.t.radiusSmall > 0 ? Math.min(width, height) / 2 : 0
+              color: col.future ? "transparent" : col.isCurrent ? card.t.accent : card.t.inkA(col.isHover ? 0.20 : 0.13)
+              border.width: col.future ? 1 : 0
+              border.color: card.t.inkA(0.14)
+              clip: true
               Behavior on color { ColorAnimation { duration: 120 } }
+              // Diagonal stripes for what hasn't happened yet.
+              Canvas {
+                visible: col.future
+                anchors.fill: parent
+                onWidthChanged: requestPaint()
+                onHeightChanged: requestPaint()
+                onPaint: {
+                  var ctx = getContext("2d"); ctx.reset()
+                  ctx.strokeStyle = card.t.inkA(0.16); ctx.lineWidth = 1.5
+                  var step = card.t.px(5)
+                  for (var x = -height; x < width; x += step) { ctx.beginPath(); ctx.moveTo(x, height); ctx.lineTo(x + height, 0); ctx.stroke() }
+                }
+              }
             }
 
             JText {

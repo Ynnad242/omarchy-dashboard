@@ -1,7 +1,9 @@
 import QtQuick
 import QtQuick.Shapes
 
-// A circular gauge that sweeps to `value` (0-100) as `progress` runs.
+// A circular gauge that sweeps to `value` (0-100) as `progress` runs, Bklit
+// style: rounded ends over a faint full track. Live changes glide rather than
+// jump.
 Item {
   id: ring
 
@@ -10,19 +12,21 @@ Item {
   property real progress: 1
   property color color: t.accent
   property string label: ""
-  property real thickness: t.px(6)
+  property real thickness: t.px(7)
+  Behavior on value { NumberAnimation { duration: 700; easing.type: Easing.OutQuart } }
+  readonly property int cap: t.radiusSmall > 0 ? ShapePath.RoundCap : ShapePath.FlatCap
 
-  readonly property real sweep: 360 * Math.max(0, Math.min(100, value)) / 100 * (1 - Math.pow(1 - Math.max(0, Math.min(1, progress)), 3))
+  readonly property real sweep: 360 * Math.max(0, Math.min(100, value)) / 100 * (1 - Math.pow(1 - Math.max(0, Math.min(1, progress)), 4))
 
   Shape {
     anchors.fill: parent
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
-      strokeColor: ring.t.inkA(0.07)
+      strokeColor: ring.t.inkA(0.09)
       strokeWidth: ring.thickness
       fillColor: "transparent"
-      capStyle: ShapePath.RoundCap
+      capStyle: ring.cap
       PathAngleArc {
         centerX: ring.width / 2; centerY: ring.height / 2
         radiusX: ring.width / 2 - ring.thickness; radiusY: radiusX
@@ -33,7 +37,7 @@ Item {
       strokeColor: ring.color
       strokeWidth: ring.thickness
       fillColor: "transparent"
-      capStyle: ShapePath.RoundCap
+      capStyle: ring.cap
       PathAngleArc {
         centerX: ring.width / 2; centerY: ring.height / 2
         radiusX: ring.width / 2 - ring.thickness; radiusY: radiusX
