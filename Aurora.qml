@@ -10,7 +10,6 @@ import Quickshell
 //          sparkles and HUD labels in the margins
 //   swiss  plain paper with a faint 12-column grid
 //   wabi   warm paper with a little grain
-//   ynnad  a studio backdrop: soft spotlight and vignette
 // Painted with gradients and a Canvas, so no shader support is needed.
 Item {
   id: canvas
@@ -142,18 +141,6 @@ Item {
         ctx.fillText("2000 AND BEYOND  //  DIGITAL DREAMS", 0, 0); ctx.restore()
         ctx.save(); ctx.translate(h * 0.016, h * 0.97); ctx.rotate(-Math.PI / 2)
         ctx.fillText(">> SYSTEM ONLINE   \u25cf  CONNECTION OK", 0, 0); ctx.restore()
-        break
-      }
-      case "ynnad": {
-        // A studio backdrop: a broad soft spotlight from above-left, falling
-        // off into a dark vignette at the edges.
-        blob(w * 0.3, -h * 0.15, h * 1.2, Qt.rgba(1, 1, 1, 1), 0.07)
-        blob(w * 0.85, h * 0.2, h * 0.7, Qt.rgba(0.87, 0.9, 0.92, 1), 0.035)
-        var v = ctx.createRadialGradient(w * 0.45, h * 0.4, h * 0.35, w * 0.45, h * 0.4, w * 0.75)
-        v.addColorStop(0, "rgba(0,0,0,0)")
-        v.addColorStop(1, "rgba(0,0,0,0.55)")
-        ctx.fillStyle = v
-        ctx.fillRect(0, 0, w, h)
         break
       }
       case "swiss": {

@@ -566,13 +566,6 @@ Item {
     id: theme
     u: Math.max(0.6, Math.min(win.width / 1920, win.height / 1080))
   }
-  // The second card color for styles that alternate cards (Ynnad).
-  Theme {
-    id: themeAlt
-    variant: "alt"
-    u: theme.u
-  }
-  function tt(alt) { return alt && theme.ynnad ? themeAlt : theme }
   Timer {
     interval: 1000
     repeat: true
@@ -680,24 +673,13 @@ Item {
           Behavior on opacity { NumberAnimation { duration: Style.duration(root.live ? 260 : 120); easing.type: Easing.OutCubic } }
           Behavior on rise { NumberAnimation { duration: Style.duration(320); easing.type: Easing.Bezier; easing.bezierCurve: Style.easeOut } }
 
-          // "Good evening, Name." In Ynnad the name is set in Racing Red.
-          Row {
+          JText {
             id: hello
-            JText {
-              t: theme
-              text: root.dash.greeting + ", "
-              size: 24
-              font.weight: theme.ynnad ? Font.Black : Font.DemiBold
-              font.letterSpacing: theme.ynnad ? -0.8 : -0.4
-            }
-            JText {
-              t: theme
-              text: root.userName + (theme.ynnad ? "." : "")
-              size: 24
-              font.weight: theme.ynnad ? Font.Black : Font.DemiBold
-              font.letterSpacing: theme.ynnad ? -0.8 : -0.4
-              color: theme.ynnad ? theme.accent : theme.text
-            }
+            t: theme
+            text: root.dash.greeting + ", " + root.userName
+            size: 24
+            font.weight: Font.DemiBold
+            font.letterSpacing: -0.4
           }
           JText {
             id: dateLine
@@ -865,7 +847,7 @@ Item {
             StatCard {
               required property int index
               readonly property var modelData: root.stats[index]
-              t: root.tt(index % 2 === 1)
+              t: theme
               model: modelData
               width: kpis.cardW
               height: kpis.height
@@ -889,7 +871,7 @@ Item {
           onRangePicked: function(r) { root.range = r }
         }
         TodayCard {
-          t: root.tt(true)
+          t: theme
           x: chart.width + content.gap
           y: chart.y
           width: content.width - x
@@ -920,7 +902,7 @@ Item {
           }
           DiscordCard {
             id: discordCard
-            t: root.tt(true)
+            t: theme
             x: inbox.x + inbox.width + content.gap
             width: lower.unit * lower.weights[1]
             height: lower.height
@@ -948,7 +930,7 @@ Item {
           }
           HomeCard {
             id: homeCard
-            t: root.tt(true)
+            t: theme
             x: todoCard.x + todoCard.width + content.gap
             width: lower.unit * lower.weights[3]
             height: lower.height

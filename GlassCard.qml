@@ -67,10 +67,6 @@ Item {
   SoftShadow { visible: card.t.neu; target: bg; radius: bg.radius; blur: card.t.px(26); dx: card.t.px(11); dy: card.t.px(11); color: card.t.shadowDark; strength: 0.9 }
   SoftShadow { visible: card.t.clay; target: bg; radius: bg.radius; blur: card.t.px(36); dx: 0; dy: card.t.px(16); color: "black"; strength: 0.8 }
   SoftShadow { visible: card.t.y2k; target: bg; radius: bg.radius; blur: card.t.px(3); dx: card.t.px(6); dy: card.t.px(6); color: "#00052e"; strength: 0.9; steps: 3 }
-  // ynnad: product-shot lighting: a wide soft shadow below, a tighter one
-  // close under the edge.
-  SoftShadow { visible: card.t.ynnad; target: bg; radius: bg.radius; blur: card.t.px(40); dx: 0; dy: card.t.px(18); color: "black"; strength: 0.9 }
-  SoftShadow { visible: card.t.ynnad; target: bg; radius: bg.radius; blur: card.t.px(10); dx: 0; dy: card.t.px(4); color: "black"; strength: 0.5 }
   SoftShadow { visible: card.t.wabi; target: bg; radius: bg.radius; blur: card.t.px(22); dx: 0; dy: card.t.px(7); color: "#3a2a1a"; strength: 0.26 }
 
   // ---- the surface --------------------------------------------------------------------
@@ -200,17 +196,6 @@ Item {
       border.color: Qt.rgba(0.23, 0.19, 0.14, 0.12)
     }
 
-    // ynnad: a studio spotlight across obsidian cards
-    Rectangle {
-      visible: card.t.ynnad && card.t.dark
-      anchors.fill: parent
-      radius: parent.radius
-      gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.045) }
-        GradientStop { position: 0.6; color: Qt.rgba(1, 1, 1, 0.0) }
-      }
-    }
     // discord: an embed's colored bar down the left edge
     Rectangle {
       visible: card.t.discord
@@ -248,10 +233,10 @@ Item {
       text: card.t.swiss || card.t.y2k || card.t.discord ? card.title.toUpperCase() : card.title
       size: card.t.swiss ? 11.5 : card.t.y2k || card.t.discord ? 11 : 12.5
       mono: card.t.y2k
-      font.weight: card.t.swiss || card.t.y2k || card.t.ynnad || card.t.discord ? Font.Bold : Font.Medium
+      font.weight: card.t.swiss || card.t.y2k || card.t.discord ? Font.Bold : Font.Medium
       font.letterSpacing: card.t.swiss ? 1.2 : card.t.y2k ? 1.5 : card.t.discord ? 0.6 : 0
       font.italic: card.t.wabi
-      color: card.t.y2k ? "white" : card.t.swiss || card.t.ynnad ? card.t.text : card.t.textDim
+      color: card.t.y2k ? "white" : card.t.swiss ? card.t.text : card.t.textDim
     }
     JText {
       visible: card.sample

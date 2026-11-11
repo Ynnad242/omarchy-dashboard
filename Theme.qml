@@ -27,7 +27,6 @@ QtObject {
     { key: "y2k", label: "Y2K" },
     { key: "swiss", label: "Swiss" },
     { key: "wabi", label: "Wabi-sabi" },
-    { key: "ynnad", label: "Ynnad" },
     { key: "omarchy", label: "Omarchy" },
     { key: "discord", label: "Discord" }
   ]
@@ -40,9 +39,6 @@ QtObject {
   ]
 
   property string style: Quickshell.env("JARVIS_STYLE") || "flat"
-  // "alt" gives a style's second card color, for styles that alternate
-  // cards (Ynnad: Ice Grey cards between the obsidian ones).
-  property string variant: ""
   property var custom: ({})          // hand-picked colors, by key
   // The user's own saved themes: [{ name, style, colors }], newest last.
   property var saved: []
@@ -52,7 +48,6 @@ QtObject {
   readonly property bool y2k: style === "y2k"
   readonly property bool swiss: style === "swiss"
   readonly property bool wabi: style === "wabi"
-  readonly property bool ynnad: style === "ynnad"
   readonly property bool omarchy: style === "omarchy"
   readonly property bool discord: style === "discord"
 
@@ -68,9 +63,9 @@ QtObject {
   property var pal: ({})
   property int hyprBorder: 0
 
-  readonly property var preset: presetFor(style, variant)
+  readonly property var preset: presetFor(style)
   // Any style's recipe, so the settings page can preview styles not in use.
-  function presetFor(s, v) {
+  function presetFor(s) {
     var bg = themeBg, fg = themeFg
     var darkText = Qt.tint(fg, Qt.rgba(1, 1, 1, 0.55))
     switch (s) {
@@ -122,15 +117,6 @@ QtObject {
       dark: true, base: "#313338", surface: "#2b2d31", hover: "#2e3035", raised: "#383a40",
       border: Qt.rgba(0, 0, 0, 0), borderStrong: Qt.rgba(1, 1, 1, 0.08), text: "#dbdee1",
       radius: 8, small: 4, font: "Noto Sans", accent: "#5865f2", green: "#23a55a", red: "#f23f43", yellow: "#f0b232" }
-    // Ynnad: Obsidian Black, Ice Grey and Racing Red. Obsidian cards and Ice
-    // Grey cards alternate on a near-black page; red cuts across corners.
-    case "ynnad": return v === "alt" ? {
-      dark: false, base: "#09090b", surface: "#dfe5eb", hover: "#e7ecf1", raised: "#cfd7df",
-      border: Qt.rgba(0, 0, 0, 0.06), borderStrong: Qt.rgba(0.94, 0.14, 0.24, 0.8), text: "#111217",
-      radius: 3, small: 2, font: "Adwaita Sans", accent: "#ef233c", green: "#16804a", red: "#c8102e", yellow: "#9a5b00" } : {
-      dark: true, base: "#09090b", surface: "#111217", hover: "#16171d", raised: "#1e1f26",
-      border: Qt.rgba(1, 1, 1, 0.06), borderStrong: Qt.rgba(0.94, 0.14, 0.24, 0.8), text: "#eef1f4",
-      radius: 3, small: 2, font: "Adwaita Sans", accent: "#ef233c", green: "#3ddc84", red: "#ff4d63", yellow: "#ffb020" }
     default: return {
       dark: true, base: Qt.darker(bg, 1.45), surface: Qt.tint(Qt.darker(bg, 1.45), Qt.rgba(1, 1, 1, 0.035)),
       hover: Qt.tint(Qt.darker(bg, 1.45), Qt.rgba(1, 1, 1, 0.055)), raised: Qt.tint(Qt.darker(bg, 1.45), Qt.rgba(1, 1, 1, 0.07)),

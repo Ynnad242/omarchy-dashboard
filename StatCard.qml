@@ -53,9 +53,9 @@ GlassCard {
       anchors.top: label.bottom
       anchors.topMargin: stat.t.px(10)
       text: stat.format(stat.model.kind, (stat.model.value || 0) * stat.ease(stat.progress * 1.25))
-      size: stat.model.kind === "text" ? 20 : stat.t.ynnad ? 30 : 28
-      font.weight: stat.t.ynnad ? Font.Black : Font.DemiBold
-      font.letterSpacing: stat.t.ynnad ? -1.2 : -0.6
+      size: stat.model.kind === "text" ? 20 : 28
+      font.weight: Font.DemiBold
+      font.letterSpacing: -0.6
       color: stat.model.kind === "text" ? stat.t.textFaint : stat.t.text
     }
 
