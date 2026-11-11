@@ -30,7 +30,7 @@ Rectangle {
   width: t.px(size)
   height: width
   radius: width / 2
-  color: Qt.tint(t.base, av.t.inkA(0.10))
+  color: Qt.tint(t.dark ? t.base : t.surface, av.t.inkA(0.10))
   border.width: ring ? 2 : 1
   border.color: ring ? ringColor : t.surface
 

@@ -26,7 +26,10 @@ QtObject {
     { key: "clay", label: "Claymorphism" },
     { key: "y2k", label: "Y2K" },
     { key: "swiss", label: "Swiss" },
-    { key: "wabi", label: "Wabi-sabi" }
+    { key: "wabi", label: "Wabi-sabi" },
+    { key: "ynnad", label: "Ynnad" },
+    { key: "omarchy", label: "Omarchy" },
+    { key: "discord", label: "Discord" }
   ]
   readonly property var colorKeys: [
     { key: "background", label: "Background" },
@@ -37,6 +40,9 @@ QtObject {
   ]
 
   property string style: Quickshell.env("JARVIS_STYLE") || "flat"
+  // "alt" gives a style's second card color, for styles that alternate
+  // cards (Ynnad: Ice Grey cards between the obsidian ones).
+  property string variant: ""
   property var custom: ({})          // hand-picked colors, by key
   // The user's own saved themes: [{ name, style, colors }], newest last.
   property var saved: []
@@ -46,6 +52,9 @@ QtObject {
   readonly property bool y2k: style === "y2k"
   readonly property bool swiss: style === "swiss"
   readonly property bool wabi: style === "wabi"
+  readonly property bool ynnad: style === "ynnad"
+  readonly property bool omarchy: style === "omarchy"
+  readonly property bool discord: style === "discord"
 
   // ---- what each style starts from ---------------------------------------------
   readonly property color themeBg: Commons.Color.background
@@ -54,10 +63,14 @@ QtObject {
   property color paletteGreen: "#9ece6a"
   property color paletteRed: "#f7768e"
   property color paletteYellow: "#e0af68"
+  // The rest of the Omarchy theme, for the Omarchy style: colors.toml keys
+  // and the window border colors from the theme's hyprland.lua.
+  property var pal: ({})
+  property int hyprBorder: 0
 
-  readonly property var preset: presetFor(style)
+  readonly property var preset: presetFor(style, variant)
   // Any style's recipe, so the settings page can preview styles not in use.
-  function presetFor(s) {
+  function presetFor(s, v) {
     var bg = themeBg, fg = themeFg
     var darkText = Qt.tint(fg, Qt.rgba(1, 1, 1, 0.55))
     switch (s) {
@@ -90,6 +103,34 @@ QtObject {
       dark: false, base: "#ddd3c1", surface: "#f6f1e6", hover: "#f9f5ec", raised: "#e6ddcc",
       border: Qt.rgba(0.23, 0.19, 0.14, 0.26), borderStrong: Qt.rgba(0.23, 0.19, 0.14, 0.42), text: "#3a332b",
       radius: 5, small: 4, font: "C059", accent: "#a5623d", green: "#5f7a4a", red: "#a8553a", yellow: "#9a742b" }
+    // Omarchy: this computer's own look. The Omarchy theme's colors, its
+    // window border colors and border width, Hyprland's corner rounding, the
+    // system font, and the wallpaper behind it all. Follows theme changes.
+    case "omarchy": {
+      var pb = t.pal.background || bg
+      var ps = t.pal.lighter_background || Qt.lighter(pb, 1.25)
+      return {
+        dark: t.pal.mode !== "light", base: pb, surface: ps, hover: Qt.lighter(ps, 1.06), raised: t.pal.selection || Qt.lighter(ps, 1.12),
+        border: t.pal.inactive_border || Commons.Util.alpha(fg, 0.15), borderStrong: t.pal.active_border || themeAccent,
+        text: t.pal.bright_foreground || fg, radius: Commons.Style.cornerRadius / t.u, small: Commons.Style.cornerRadius / t.u,
+        font: Commons.Style.font.family, borderWidth: Math.max(1, t.hyprBorder) }
+    }
+    // Discord: its dark theme. Chat-gray canvas, sidebar-gray cards with an
+    // embed's colored bar, blurple accent, green switches, Noto Sans (the
+    // fallback for Discord's own gg sans).
+    case "discord": return {
+      dark: true, base: "#313338", surface: "#2b2d31", hover: "#2e3035", raised: "#383a40",
+      border: Qt.rgba(0, 0, 0, 0), borderStrong: Qt.rgba(1, 1, 1, 0.08), text: "#dbdee1",
+      radius: 8, small: 4, font: "Noto Sans", accent: "#5865f2", green: "#23a55a", red: "#f23f43", yellow: "#f0b232" }
+    // Ynnad: Obsidian Black, Ice Grey and Racing Red. Obsidian cards and Ice
+    // Grey cards alternate on a near-black page; red cuts across corners.
+    case "ynnad": return v === "alt" ? {
+      dark: false, base: "#09090b", surface: "#dfe5eb", hover: "#e7ecf1", raised: "#cfd7df",
+      border: Qt.rgba(0, 0, 0, 0.06), borderStrong: Qt.rgba(0.94, 0.14, 0.24, 0.8), text: "#111217",
+      radius: 3, small: 2, font: "Adwaita Sans", accent: "#ef233c", green: "#16804a", red: "#c8102e", yellow: "#9a5b00" } : {
+      dark: true, base: "#09090b", surface: "#111217", hover: "#16171d", raised: "#1e1f26",
+      border: Qt.rgba(1, 1, 1, 0.06), borderStrong: Qt.rgba(0.94, 0.14, 0.24, 0.8), text: "#eef1f4",
+      radius: 3, small: 2, font: "Adwaita Sans", accent: "#ef233c", green: "#3ddc84", red: "#ff4d63", yellow: "#ffb020" }
     default: return {
       dark: true, base: Qt.darker(bg, 1.45), surface: Qt.tint(Qt.darker(bg, 1.45), Qt.rgba(1, 1, 1, 0.035)),
       hover: Qt.tint(Qt.darker(bg, 1.45), Qt.rgba(1, 1, 1, 0.055)), raised: Qt.tint(Qt.darker(bg, 1.45), Qt.rgba(1, 1, 1, 0.07)),
@@ -140,6 +181,7 @@ QtObject {
   readonly property color stroke: border
   readonly property color strokeHover: borderStrong
 
+  readonly property real borderWidth: preset.borderWidth || 1
   readonly property int radius: px(preset.radius)
   readonly property int radiusSmall: px(preset.small)
   readonly property string font: preset.font
@@ -241,7 +283,41 @@ QtObject {
     }
   }
 
+  function parseTheme(raw) {
+    var p = {}
+    var keys = ["mode", "background", "lighter_background", "dark_background", "selection", "muted", "foreground", "bright_foreground"]
+    for (var i = 0; i < keys.length; i++) {
+      var m = new RegExp("^\\s*" + keys[i] + "\\s*=\\s*\"([^\"]+)\"", "m").exec(raw)
+      if (m) p[keys[i]] = m[1]
+    }
+    for (var k in t.pal) if (k === "active_border" || k === "inactive_border") p[k] = t.pal[k]
+    t.pal = p
+  }
+  // hyprland.lua: local active_border_color = "#7aa2f7", inactive = "rgba(595959aa)"
+  function parseBorders(raw) {
+    var p = {}
+    for (var k in t.pal) p[k] = t.pal[k]
+    var a = /active_border_color\s*=\s*"#([0-9a-fA-F]{6})/.exec(raw)
+    if (a) p.active_border = "#" + a[1]
+    var n = /inactive_border_color\s*=\s*"(?:rgba\()?#?([0-9a-fA-F]{6})([0-9a-fA-F]{2})?/.exec(raw)
+    if (n) p.inactive_border = n[2] ? Qt.rgba(parseInt(n[1].slice(0, 2), 16) / 255, parseInt(n[1].slice(2, 4), 16) / 255, parseInt(n[1].slice(4, 6), 16) / 255, parseInt(n[2], 16) / 255) : "#" + n[1]
+    t.pal = p
+  }
+  property FileView hyprThemeFile: FileView {
+    path: Quickshell.env("HOME") + "/.local/state/omarchy/current/theme/hyprland.lua"
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: t.parseBorders(text())
+  }
+  property Process borderProc: Process {
+    command: ["hyprctl", "getoption", "general:border_size", "-j"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: { try { t.hyprBorder = JSON.parse(text).int || 0 } catch (e) {} } }
+  }
+
   function parseColors(raw) {
+    t.parseTheme(raw)
     var keys = [["green", "paletteGreen"], ["red", "paletteRed"], ["yellow", "paletteYellow"]]
     for (var i = 0; i < keys.length; i++) {
       var m = new RegExp("^\\s*" + keys[i][0] + "\\s*=\\s*\"(#[0-9a-fA-F]{6})\"", "m").exec(raw)

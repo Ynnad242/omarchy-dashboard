@@ -32,7 +32,7 @@ Item {
   Rectangle {
     anchors.fill: parent
     radius: tg.t.swiss ? 0 : height / 2
-    color: tg.on ? tg.t.accent : (tg.t.neu ? tg.t.glassInset : tg.t.inkA(0.12))
+    color: tg.on ? (tg.t.discord ? tg.t.green : tg.t.accent) : (tg.t.neu ? tg.t.glassInset : tg.t.inkA(0.12))
     Behavior on color { ColorAnimation { duration: Style.duration(160) } }
     InsetShade { t: tg.t; visible: tg.t.neu && !tg.on }
   }

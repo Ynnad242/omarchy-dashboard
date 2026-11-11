@@ -29,8 +29,8 @@ Item {
   Rectangle {
     id: railBg
     anchors.fill: parent
-    radius: width / 2
-    color: rail.t.surface
+    radius: rail.t.discord ? rail.t.px(16) : width / 2
+    color: rail.t.discord ? "#1e1f22" : rail.t.surface
     border.width: 1
     border.color: rail.t.border
   }

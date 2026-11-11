@@ -11,12 +11,17 @@ inside the Omarchy shell as the `ynnad.jarvis` plugin.
 |---|---|---|
 | ![Tasks](docs/tasks.png) | ![Stocks](docs/stocks.png) | ![Settings](docs/settings.png) |
 
-Seven styles, switchable in Settings, with your own colors on top: flat,
-glass, neumorphism, claymorphism, Y2K, Swiss and wabi-sabi.
+Ten styles, switchable in Settings, with your own colors on top: flat, glass,
+neumorphism, claymorphism, Y2K, Swiss, wabi-sabi, Ynnad (obsidian, ice grey
+and racing red), **Omarchy** (matches your desktop: your Omarchy theme's
+colors, font, corners and wallpaper, and follows theme changes) and
+**Discord** (Discord's dark theme, embeds and all).
 
-![All seven styles](docs/styles.jpg)
+![All ten styles](docs/styles.jpg)
 
 ![Jarvis in the Y2K style](docs/home-y2k.png)
+
+![Jarvis in the Ynnad style](docs/home-ynnad.png)
 
 Screenshots use made-up demo data.
 
@@ -88,7 +93,7 @@ in Settings, or edit the site and app lists in `~/.config/jarvis/coach.json`.
 | Tab, Space, arrows | Move between and change controls in Settings |
 
 Settings has the style, colors, your name, the clock, the exercise coach, and a
-switch for every online service. Under Style, **Presets** are the seven built-in
+switch for every online service. Under Style, **Presets** are the ten built-in
 looks and **Yours** holds themes you save: pick a preset, change any colors,
 then "Save current" (or "Save as theme" on the Colors card) to switch back to it
 any time. Saved themes stay on your computer.

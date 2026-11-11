@@ -75,7 +75,7 @@ Item {
     anchors.fill: parent
     radius: card.t.radius
     color: card.t.swiss ? "transparent" : (card.hoverable && card.hovered ? card.t.surfaceHover : card.t.surface)
-    border.width: card.t.neu || card.t.clay || card.t.swiss ? 0 : card.t.y2k ? card.t.px(1.5) : 1
+    border.width: card.t.neu || card.t.clay || card.t.swiss || card.t.discord ? 0 : card.t.y2k ? card.t.px(1.5) : card.t.borderWidth
     border.color: card.hoverable && card.hovered ? card.t.borderStrong : card.t.border
     Behavior on border.color { ColorAnimation { duration: Style.duration(140) } }
     Behavior on color { ColorAnimation { duration: Style.duration(140) } }
@@ -196,6 +196,62 @@ Item {
       border.color: Qt.rgba(0.23, 0.19, 0.14, 0.12)
     }
 
+    // ynnad: a studio spotlight on obsidian cards, and Racing Red cutting
+    // across a corner: a broad wedge on obsidian, a thin slash on Ice Grey.
+    Rectangle {
+      visible: card.t.ynnad && card.t.dark
+      anchors.fill: parent
+      radius: parent.radius
+      gradient: Gradient {
+        orientation: Gradient.Horizontal
+        GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.045) }
+        GradientStop { position: 0.6; color: Qt.rgba(1, 1, 1, 0.0) }
+      }
+    }
+    Canvas {
+      id: redCut
+      visible: card.t.ynnad
+      anchors.fill: parent
+      readonly property bool darkCard: card.t.dark
+      onWidthChanged: requestPaint()
+      onHeightChanged: requestPaint()
+      onDarkCardChanged: requestPaint()
+      onVisibleChanged: requestPaint()
+      onPaint: {
+        var ctx = getContext("2d")
+        ctx.reset()
+        if (!visible) return
+        var w = width, h = height
+        var g = ctx.createLinearGradient(w, h, w * 0.6, h * 0.4)
+        g.addColorStop(0, "#ef233c")
+        g.addColorStop(1, "#a50f22")
+        ctx.fillStyle = g
+        ctx.beginPath()
+        if (darkCard) {
+          // A wedge rising from the bottom-right corner, kept small enough
+          // to stay clear of the card's content.
+          var d = Math.min(w * 0.2, h * 0.42, card.t.px(96))
+          ctx.moveTo(w - d * 1.2, h); ctx.lineTo(w, h - d); ctx.lineTo(w, h)
+        } else {
+          // A small corner flag, top-right, clear of the header text.
+          var e = card.t.px(22)
+          ctx.moveTo(w - e, 0); ctx.lineTo(w, 0); ctx.lineTo(w, e)
+        }
+        ctx.closePath()
+        ctx.fill()
+      }
+    }
+
+    // discord: an embed's colored bar down the left edge
+    Rectangle {
+      visible: card.t.discord
+      width: card.t.px(4)
+      height: parent.height
+      radius: parent.radius
+      color: card.t.accent
+      Rectangle { x: parent.width / 2; width: parent.width / 2; height: parent.height; color: parent.color }
+    }
+
     // swiss: a heavy rule across the top instead of a box
     Rectangle {
       visible: card.t.swiss
@@ -220,13 +276,13 @@ Item {
       t: card.t
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
-      text: card.t.swiss || card.t.y2k ? card.title.toUpperCase() : card.title
-      size: card.t.swiss ? 11.5 : card.t.y2k ? 11 : 12.5
+      text: card.t.swiss || card.t.y2k || card.t.discord ? card.title.toUpperCase() : card.title
+      size: card.t.swiss ? 11.5 : card.t.y2k || card.t.discord ? 11 : 12.5
       mono: card.t.y2k
-      font.weight: card.t.swiss || card.t.y2k ? Font.Bold : Font.Medium
-      font.letterSpacing: card.t.swiss ? 1.2 : card.t.y2k ? 1.5 : 0
+      font.weight: card.t.swiss || card.t.y2k || card.t.ynnad || card.t.discord ? Font.Bold : Font.Medium
+      font.letterSpacing: card.t.swiss ? 1.2 : card.t.y2k ? 1.5 : card.t.discord ? 0.6 : 0
       font.italic: card.t.wabi
-      color: card.t.y2k ? "white" : card.t.swiss ? card.t.text : card.t.textDim
+      color: card.t.y2k ? "white" : card.t.swiss || card.t.ynnad ? card.t.text : card.t.textDim
     }
     JText {
       visible: card.sample

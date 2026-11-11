@@ -184,7 +184,7 @@ Item {
     id: field
     anchors.fill: parent
     radius: height / 2
-    color: bar.t.neu ? bar.t.glassInset : bar.t.surface
+    color: bar.t.neu ? bar.t.glassInset : bar.t.discord ? bar.t.raised : bar.t.surface
     InsetShade { t: bar.t }
     border.width: 1
     border.color: input.activeFocus ? bar.t.borderStrong : bar.t.border
@@ -297,7 +297,7 @@ Item {
         t: bar.t
         anchors.fill: parent
         visible: !input.text.length
-        text: "Ask Jarvis anything…"
+        text: bar.t.discord ? "Message @Jarvis" : "Ask Jarvis anything…"
         size: 13.5
         color: bar.t.textFaint
       }

@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 
 // The canvas behind everything, per style:
 //   flat   near-black with the faintest lift toward the top
@@ -9,6 +10,7 @@ import QtQuick
 //          sparkles and HUD labels in the margins
 //   swiss  plain paper with a faint 12-column grid
 //   wabi   warm paper with a little grain
+//   ynnad  near-black with a big extruded Racing Red X and a red sweep
 // Painted with gradients and a Canvas, so no shader support is needed.
 Item {
   id: canvas
@@ -19,6 +21,23 @@ Item {
   Rectangle {
     anchors.fill: parent
     color: canvas.t.base
+  }
+
+  // omarchy: the desktop's own wallpaper, dimmed toward the theme background.
+  Image {
+    visible: canvas.t.omarchy && status === Image.Ready
+    anchors.fill: parent
+    source: canvas.t.omarchy ? "file://" + Quickshell.env("HOME") + "/.local/state/omarchy/current/background" : ""
+    fillMode: Image.PreserveAspectCrop
+    asynchronous: true
+    cache: false
+    sourceSize.width: 1920
+  }
+  Rectangle {
+    visible: canvas.t.omarchy
+    anchors.fill: parent
+    color: canvas.t.base
+    opacity: 0.78
   }
 
   Rectangle {
@@ -123,6 +142,36 @@ Item {
         ctx.fillText("2000 AND BEYOND  //  DIGITAL DREAMS", 0, 0); ctx.restore()
         ctx.save(); ctx.translate(h * 0.016, h * 0.97); ctx.rotate(-Math.PI / 2)
         ctx.fillText(">> SYSTEM ONLINE   \u25cf  CONNECTION OK", 0, 0); ctx.restore()
+        break
+      }
+      case "ynnad": {
+        // A big extruded Racing Red X, lit from the top-left, partly behind
+        // the cards like the brand mark in a poster; a soft spotlight above.
+        blob(w * 0.25, -h * 0.1, h * 0.9, Qt.rgba(1, 1, 1, 1), 0.035)
+        var cx = w * 0.06, cy = h * 0.86, R = h * 0.62, th = h * 0.15
+        function bar(x1, y1, x2, y2, fill) {
+          var dx = x2 - x1, dy = y2 - y1, L = Math.sqrt(dx * dx + dy * dy)
+          var nx = -dy / L * th / 2, ny = dx / L * th / 2
+          ctx.fillStyle = fill
+          ctx.beginPath()
+          ctx.moveTo(x1 + nx, y1 + ny); ctx.lineTo(x2 + nx, y2 + ny)
+          ctx.lineTo(x2 - nx, y2 - ny); ctx.lineTo(x1 - nx, y1 - ny)
+          ctx.closePath(); ctx.fill()
+        }
+        // Depth: the same X, darker, nudged down-right.
+        var off = th * 0.22
+        bar(cx - R + off, cy - R + off, cx + R + off, cy + R + off, "#5c0812")
+        bar(cx - R + off, cy + R + off, cx + R + off, cy - R + off, "#5c0812")
+        var face = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R)
+        face.addColorStop(0, "#ff3b52")
+        face.addColorStop(0.5, "#ef233c")
+        face.addColorStop(1, "#b5122a")
+        bar(cx - R, cy - R, cx + R, cy + R, face)
+        bar(cx - R, cy + R, cx + R, cy - R, face)
+        // A thin red sweep across the top-right.
+        ctx.strokeStyle = "rgba(239,35,60,0.55)"
+        ctx.lineWidth = Math.max(2, h * 0.004)
+        ctx.beginPath(); ctx.moveTo(w * 0.62, 0); ctx.lineTo(w, h * 0.42); ctx.stroke()
         break
       }
       case "swiss": {

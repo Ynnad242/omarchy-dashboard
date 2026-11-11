@@ -298,6 +298,20 @@ Item {
         color: "#2a63ff"
       }
       Rectangle {
+        visible: mini.styleKey === "discord"
+        width: 3; height: parent.height
+        color: mini.c("accent", mini.p.accent || page.t.themeAccent)
+      }
+      Canvas {
+        visible: mini.styleKey === "ynnad"
+        anchors.fill: parent
+        onPaint: {
+          var ctx = getContext("2d"); ctx.reset()
+          ctx.fillStyle = "#ef233c"
+          ctx.beginPath(); ctx.moveTo(width * 0.62, height); ctx.lineTo(width, height * 0.35); ctx.lineTo(width, height); ctx.closePath(); ctx.fill()
+        }
+      }
+      Rectangle {
         x: page.t.px(8); y: mini.styleKey === "y2k" ? parent.height * 0.32 : page.t.px(8)
         width: parent.width * 0.4; height: page.t.px(4); radius: 2
         color: mini.c("text", mini.p.text); opacity: 0.6
@@ -336,7 +350,7 @@ Item {
       id: tiles
       visible: page.styleTab === "presets"
       width: parent.width
-      columns: 4
+      columns: 5
       spacing: page.t.px(14)
       readonly property real tileW: (width - spacing * (columns - 1)) / columns
       readonly property real tileH: Math.max(page.t.px(60), (parent.height - spacing - page.t.px(44)) / 2)
@@ -379,7 +393,7 @@ Item {
       id: mine
       visible: page.styleTab === "mine"
       width: parent.width
-      columns: 4
+      columns: 5
       spacing: page.t.px(14)
       readonly property real tileW: tiles.tileW
       readonly property real tileH: tiles.tileH
