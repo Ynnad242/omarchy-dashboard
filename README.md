@@ -107,10 +107,13 @@ stay on your computer.
 
 ## Update
 
-```bash
-omarchy plugin update ynnad.jarvis
-omarchy restart shell
-```
+Jarvis updates itself. It checks GitHub when it starts and every 6 hours, and
+installs a new version right away at start, or later once you leave workspace
+1, then tells you with a notification. Settings → General shows your version,
+has an *Update* button, and lets you turn automatic updates off. Updates go
+through `omarchy plugin update`, which checks the new files and keeps the old
+version if anything is wrong. If you edited Jarvis's files yourself, it won't
+overwrite them.
 
 ## Uninstall
 

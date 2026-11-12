@@ -131,6 +131,7 @@ Item {
 
   onOnScreenChanged: {
     root.announce()
+    if (!onScreen && root.updatePending && root.autoUpdate) root.applyUpdate()
     if (onScreen) {
       root.now = new Date()
       root.dash = Mock.build(root.now)
@@ -380,6 +381,84 @@ Item {
   }
   function checkShortcut() { if (!shortcutProc.running) { shortcutProc.command = ["python3", "-I", root.script("setup.py"), "shortcut-status"]; shortcutProc.running = true } }
   function addShortcut() { if (!shortcutProc.running) { shortcutProc.command = ["python3", "-I", root.script("setup.py"), "shortcut-add"]; shortcutProc.running = true } }
+
+  // ---- Updates (update.py) -----------------------------------------------------
+  // Checked a few seconds after Jarvis starts and every 6 hours. With "Update
+  // automatically" on, a new version is installed at start, or later once you
+  // leave workspace 1, so it never reloads under your hands. The update runs
+  // detached, because the new files make the shell reload this plugin.
+  property var update: ({ status: "", current: "", latest: "", available: false, canApply: false, error: "", notes: [], checked: 0 })
+  property bool updateChecking: false
+  property bool updateApplying: false
+  property bool updatePending: false        // waiting for you to leave workspace 1
+  property bool updateAtStart: true
+  property string updateNotified: ""
+  property string version: ""
+  FileView { path: root.script("manifest.json"); printErrors: false; onLoaded: { try { root.version = JSON.parse(text()).version || "" } catch (e) {} } }
+  property var lastUpdate: ({})           // { ok, before, after, notes, at }
+  readonly property bool autoUpdate: root.settings.autoUpdate !== false
+  Process {
+    id: updateProc
+    stdout: StdioCollector { onStreamFinished: root.gotUpdate(text) }
+    onExited: root.updateChecking = false
+  }
+  function checkUpdates() {
+    if (root.demo || updateProc.running || root.updateApplying) return
+    root.updateChecking = true
+    updateProc.command = ["python3", "-I", root.script("update.py"), "check"]
+    updateProc.running = true
+  }
+  function gotUpdate(text) {
+    var m
+    try { m = JSON.parse(text) } catch (e) { return }
+    m.notes = m.notes || []
+    m.error = m.error || ""
+    root.update = m
+    var start = root.updateAtStart
+    root.updateAtStart = false
+    if (m.status === "error" && start) updateRetry.start()
+    if (!m.canApply) return
+    if (root.autoUpdate) {
+      if (start || !root.onScreen) root.applyUpdate()
+      else root.updatePending = true
+    } else if (root.updateNotified !== m.latest) {
+      root.updateNotified = m.latest
+      Quickshell.execDetached(["notify-send", "-a", "Jarvis", "Jarvis " + m.latest + " is ready", "Open Settings to update."])
+    }
+  }
+  function applyUpdate() {
+    if (root.demo || root.updateApplying || !root.update.canApply) return
+    root.updatePending = false
+    root.updateApplying = true
+    updateGiveUp.restart()
+    Quickshell.execDetached(["setsid", "-f", "python3", "-I", root.script("update.py"), "apply"])
+  }
+  onAutoUpdateChanged: if (autoUpdate && update.canApply && !onScreen) applyUpdate()
+  Timer { interval: 4000; running: !root.demo; onTriggered: root.checkUpdates() }
+  Timer { id: updateRetry; interval: 60000; onTriggered: root.checkUpdates() }   // network not up yet at login
+  Timer { interval: 6 * 3600 * 1000; repeat: true; running: !root.demo; onTriggered: root.checkUpdates() }
+  Timer { id: updateGiveUp; interval: 240000; onTriggered: root.updateApplying = false }
+  // How the last update went; read again after the reload it causes.
+  FileView {
+    id: updateState
+    path: root.stateDir + "/update.json"
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onLoaded: {
+      var j
+      try { j = JSON.parse(text()) } catch (e) { return }
+      if (j && typeof j === "object") root.lastUpdate = j
+      if (!j || j.seen !== false || root.demo) return
+      root.updateApplying = false
+      updateGiveUp.stop()
+      if (j.ok) Quickshell.execDetached(["notify-send", "-a", "Jarvis", "Jarvis updated to " + j.after, "Settings → General shows what changed."])
+      else Quickshell.execDetached(["notify-send", "-a", "Jarvis", "Jarvis couldn't update", String(j.error || "")])
+      j.seen = true
+      setText(JSON.stringify(j) + "\n")
+      if (!j.ok) root.checkUpdates()
+    }
+  }
 
   // ---- Govee lamps + air purifier (govee.py) -----------------------------------
   property var home: ({ lights: [], purifiers: [], cloud: "off", error: "" })

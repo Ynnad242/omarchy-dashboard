@@ -194,6 +194,35 @@ Item {
         }
       }
       Row2 {
+        id: verRow
+        readonly property var u: page.app ? page.app.update : ({})
+        readonly property bool busy: !!page.app && (page.app.updateChecking || page.app.updateApplying)
+        label: "Version " + (u.current || (page.app ? page.app.version : ""))
+        hint: !page.app ? ""
+            : page.app.demo ? "Up to date"
+            : page.app.updateApplying ? "Updating to " + u.latest + "…"
+            : page.app.updateChecking ? "Checking for updates…"
+            : u.canApply ? u.latest + " is ready" + (u.notes.length ? ": " + u.notes[0] : "")
+            : u.error ? u.error
+            : u.status === "current" ? "Up to date" + (page.app.lastUpdate.ok && page.app.lastUpdate.after === u.current && page.app.lastUpdate.notes && page.app.lastUpdate.notes.length
+                                                         ? " · new: " + page.app.lastUpdate.notes[0] : "")
+            : ""
+        SButton {
+          t: page.t
+          kind: verRow.u.canApply ? "primary" : "plain"
+          busy: verRow.busy
+          busyLabel: page.app && page.app.updateApplying ? "Updating…" : "Checking…"
+          label: verRow.u.canApply ? "Update" : "Check"
+          enabled: !!page.app && !page.app.demo && !verRow.busy
+          onClicked: verRow.u.canApply ? page.app.applyUpdate() : page.app.checkUpdates()
+        }
+      }
+      Row2 {
+        label: "Update automatically"
+        hint: "When Jarvis starts, or when you're away from workspace 1"
+        JToggle { t: page.t; on: page.settings.autoUpdate !== false; Accessible.name: "Update automatically"; onFlipped: function(v) { page.setSetting("autoUpdate", v) } }
+      }
+      Row2 {
         label: "Exercise coach"
         hint: "A short set after too much scrolling"
         JToggle { t: page.t; on: page.coach ? page.coach.enabled : true; Accessible.name: "Exercise coach"; onFlipped: function(v) { if (page.coach) page.coach.setOption("enabled", v) } }
