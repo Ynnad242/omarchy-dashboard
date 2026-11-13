@@ -32,8 +32,8 @@ Item {
   readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/jarvis"
   readonly property string configDir: Quickshell.env("HOME") + "/.config/jarvis"
 
-  // Until someone types their name in Settings, the greeting says "User".
-  readonly property string defaultName: "User"
+  // Until someone types their name in Settings, the greeting says "Username".
+  readonly property string defaultName: "Username"
   readonly property string userName: root.demo ? "Alex" : (root.settings.name ? root.settings.name : root.defaultName)
 
   // Demo mode (JARVIS_DEMO=1): every card shows made-up data from
