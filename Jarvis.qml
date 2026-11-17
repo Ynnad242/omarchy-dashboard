@@ -4,6 +4,7 @@ import Quickshell.Hyprland
 import QtQuick
 import qs.Commons
 import "MockData.js" as Mock
+import "Layout.js" as Layout
 
 // Jarvis: a home-screen app that lives on workspace 1. The shell starts it,
 // it keeps its own window on workspace 1 (no Hyprland rule needed), and it stays there.
@@ -111,6 +112,14 @@ Item {
     if (!on) h.push(key)
     root.setSetting("hidden", h)
     if (key === "stocksPage" && !on && root.page === 2) root.page = 0
+  }
+  // Where cards sit (Settings > Dashboard, drag to move): rows of card keys.
+  property var demoLayout: null
+  readonly property var layoutRows: Layout.normalize(root.demo ? root.demoLayout : root.settings.layout)
+  readonly property var shownRows: Layout.visible(root.layoutRows, function(k) { return root.shows(k) })
+  function setLayout(rows) {
+    if (root.demo) root.demoLayout = rows
+    else root.setSetting("layout", Layout.same(rows, Layout.defaults) ? null : rows)
   }
   readonly property var pages: [
     { label: "Home", icon: "" },
@@ -1020,16 +1029,10 @@ Item {
 
         readonly property real gap: theme.px(18)
         readonly property real headerH: theme.px(96)
-        readonly property bool kpiOn: root.kpiList.length > 0
-        readonly property bool midOn: root.shows("screentime") || root.shows("today")
-        readonly property bool lowOn: lower.keys.length > 0
-        readonly property real kpiH: kpiOn ? theme.px(132) : 0
         readonly property real chatH: theme.px(58)
-        // Hidden rows give their space (and their gap) to the rest.
-        readonly property real rest: height - headerH - kpiH - chatH
-                                     - gap * (2 + (kpiOn && (midOn || lowOn) ? 1 : 0) + (midOn && lowOn ? 1 : 0))
-        readonly property real mainH: midOn ? (lowOn ? Math.round(rest * 0.5) : rest) : 0
-        readonly property real lowerH: lowOn ? rest - mainH : 0
+        // Every card's box on Home, from the saved layout.
+        readonly property var geo: Layout.geometry(root.shownRows, width, pageY, pageH, gap, theme.px(132))
+        function slot(k) { return geo[k] || ({ x: 0, y: 0, w: 0, h: 0, order: 0 }) }
         readonly property real pageY: headerH + gap
         readonly property real pageH: height - headerH - chatH - gap * 2
 
@@ -1196,29 +1199,21 @@ Item {
 
         // ---- Home page ----
 
-        Row {
-          id: kpis
-          y: pageArea.pageY
-          width: parent.width
-          height: pageArea.kpiH
-          spacing: pageArea.gap
-          readonly property real cardW: (width - spacing * (root.kpiList.length - 1)) / Math.max(1, root.kpiList.length)
-          Repeater {
-            model: root.kpiList.length
-            StatCard {
-              required property int index
-              readonly property var modelData: root.kpiList[index] || ({})
-              t: theme
-              model: modelData
-              width: kpis.cardW
-              height: kpis.height
-              shown: root.homeShown
-              order: 1 + index
-              onClicked: {
-                if (modelData.key === "tasks") root.page = 1
-                else if (modelData.key === "stocks") root.page = 2
-                else if (modelData.key === "inbox") root.openMail()
-              }
+        Repeater {
+          model: root.kpiList.length
+          StatCard {
+            required property int index
+            readonly property var modelData: root.kpiList[index] || ({})
+            readonly property var box: pageArea.slot("stat-" + modelData.key)
+            t: theme
+            model: modelData
+            x: box.x; y: box.y; width: box.w; height: box.h
+            shown: root.homeShown
+            order: 1 + index
+            onClicked: {
+              if (modelData.key === "tasks") root.page = 1
+              else if (modelData.key === "stocks") root.page = 2
+              else if (modelData.key === "inbox") root.openMail()
             }
           }
         }
@@ -1227,9 +1222,8 @@ Item {
           id: chart
           t: theme
           visible: root.shows("screentime") && opacity > 0.001
-          y: kpis.y + kpis.height + (pageArea.kpiOn ? pageArea.gap : 0)
-          width: root.shows("today") ? Math.round((pageArea.width - pageArea.gap) * 0.66) : pageArea.width
-          height: pageArea.mainH
+          x: pageArea.slot("screentime").x; y: pageArea.slot("screentime").y
+          width: pageArea.slot("screentime").w; height: pageArea.slot("screentime").h
           chartData: root.demo ? root.dash.chart : screenTime.chart()
           range: root.range
           shown: root.homeShown
@@ -1239,10 +1233,8 @@ Item {
         TodayCard {
           t: theme
           visible: root.shows("today") && opacity > 0.001
-          x: chart.visible ? chart.width + pageArea.gap : 0
-          y: chart.y
-          width: pageArea.width - x
-          height: pageArea.mainH
+          x: pageArea.slot("today").x; y: pageArea.slot("today").y
+          width: pageArea.slot("today").w; height: pageArea.slot("today").h
           items: root.demo ? root.dash.today : root.todayItems
           calendarNote: root.demo ? "" : "Calendar isn't linked yet. Tasks due today show here."
           shown: root.homeShown
@@ -1251,31 +1243,15 @@ Item {
 
         Item {
           id: lower
-          y: chart.y + (pageArea.midOn ? chart.height + pageArea.gap : 0)
           width: parent.width
-          height: pageArea.lowerH
-          // Shown cards share the row by weight, left to right.
-          readonly property var weights: ({ mail: 1.2, discord: 1.0, todo: 1.0, home: 1.05, music: 1.0, system: 0.75 })
-          readonly property var keys: ["mail", "discord", "todo", "home", "music", "system"].filter(function(k) { return root.shows(k) })
-          readonly property real unit: {
-            var w = 0
-            for (var i = 0; i < keys.length; i++) w += weights[keys[i]]
-            return (width - pageArea.gap * Math.max(0, keys.length - 1)) / Math.max(0.01, w)
-          }
-          function wOf(k) { var i = keys.indexOf(k); return i < 0 ? 0 : i === keys.length - 1 ? width - xOf(k) : unit * weights[k] }
-          function xOf(k) {
-            var x = 0
-            for (var i = 0; i < keys.length && keys[i] !== k; i++) x += unit * weights[keys[i]] + pageArea.gap
-            return x
-          }
+          height: parent.height
 
           InboxCard {
             id: inbox
             t: theme
             visible: root.shows("mail") && opacity > 0.001
-            x: lower.xOf("mail")
-            width: lower.wOf("mail")
-            height: lower.height
+            x: pageArea.slot("mail").x; y: pageArea.slot("mail").y
+            width: pageArea.slot("mail").w; height: pageArea.slot("mail").h
             mails: root.demo ? root.dash.inbox : root.mailRows
             action: root.demo ? "Gmail" : root.mail.status === "ok" ? (root.mail.providerName || "Open") : "Set up"
             onActionClicked: root.openMail()
@@ -1291,9 +1267,8 @@ Item {
             id: discordCard
             t: theme
             visible: root.shows("discord") && opacity > 0.001
-            x: lower.xOf("discord")
-            width: lower.wOf("discord")
-            height: lower.height
+            x: pageArea.slot("discord").x; y: pageArea.slot("discord").y
+            width: pageArea.slot("discord").w; height: pageArea.slot("discord").h
             discord: root.demo ? root.dash.discord : ({ voice: root.discordVoice, mentions: root.discordPings.map(function(p) {
               return { from: p.from, where: p.where, dm: p.dm, text: p.text, time: root.relTime(p.ts) } }) })
             shown: root.homeShown
@@ -1303,9 +1278,8 @@ Item {
             id: todoCard
             t: theme
             visible: root.shows("todo") && opacity > 0.001
-            x: lower.xOf("todo")
-            width: lower.wOf("todo")
-            height: lower.height
+            x: pageArea.slot("todo").x; y: pageArea.slot("todo").y
+            width: pageArea.slot("todo").w; height: pageArea.slot("todo").h
             todos: todoModel
             dueLabel: function(iso) { return root.dueLabel(iso) }
             dueState: function(iso) { return root.dueState(iso) }
@@ -1321,9 +1295,8 @@ Item {
             id: homeCard
             t: theme
             visible: root.shows("home") && opacity > 0.001
-            x: lower.xOf("home")
-            width: lower.wOf("home")
-            height: lower.height
+            x: pageArea.slot("home").x; y: pageArea.slot("home").y
+            width: pageArea.slot("home").w; height: pageArea.slot("home").h
             home: root.demo ? root.demoHome : root.home
             send: function(c) { root.homeSend(c) }
             shown: root.homeShown
@@ -1332,9 +1305,8 @@ Item {
           MusicCard {
             t: theme
             visible: root.shows("music") && opacity > 0.001
-            x: lower.xOf("music")
-            width: lower.wOf("music")
-            height: lower.height
+            x: pageArea.slot("music").x; y: pageArea.slot("music").y
+            width: pageArea.slot("music").w; height: pageArea.slot("music").h
             demo: root.demo
             live: root.onScreen && root.shows("music")
             shown: root.homeShown
@@ -1343,9 +1315,8 @@ Item {
           SystemCard {
             t: theme
             visible: root.shows("system") && opacity > 0.001
-            x: lower.xOf("system")
-            width: lower.wOf("system")
-            height: lower.height
+            x: pageArea.slot("system").x; y: pageArea.slot("system").y
+            width: pageArea.slot("system").w; height: pageArea.slot("system").h
             system: root.demo ? root.dash.system : ({ cpu: root.sys.cpu, ram: root.sys.ram, disk: root.sys.disk, mouse: null })
             shown: root.homeShown
             order: 12
