@@ -1299,6 +1299,7 @@ Item {
             width: pageArea.slot("home").w; height: pageArea.slot("home").h
             home: root.demo ? root.demoHome : root.home
             send: function(c) { root.homeSend(c) }
+            reconnect: function() { root.restartGovee() }
             shown: root.homeShown
             order: 10
           }

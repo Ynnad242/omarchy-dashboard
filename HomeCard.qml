@@ -10,6 +10,7 @@ GlassCard {
 
   property var home: ({ lights: [], purifiers: [], cloud: "off", error: "" })
   property var send: function(cmd) {}
+  property var reconnect: function() {}    // restart the lamp finder (fresh network sockets)
 
   readonly property var lights: home.lights || []
   readonly property bool lampFound: lights.length > 0
@@ -81,6 +82,33 @@ GlassCard {
       }
       current: card.target
       onPicked: function(key) { card.target = key }
+    },
+    // Reconnect: lamps that dropped off Wi-Fi get looked for again.
+    Rectangle {
+      id: refresh
+      property bool busy: false
+      width: card.t.px(26); height: width; radius: width / 2
+      anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+      color: rma.containsMouse ? card.t.inkA(0.10) : "transparent"
+      Accessible.role: Accessible.Button
+      Accessible.name: "Reconnect lamps"
+      JText {
+        id: rglyph
+        anchors.centerIn: parent
+        t: card.t
+        text: String.fromCodePoint(0xF0450)
+        size: 13
+        color: refresh.busy ? card.t.accent : card.t.textDim
+        RotationAnimation on rotation { running: refresh.busy; from: 0; to: 360; duration: 900; loops: Animation.Infinite }
+      }
+      Timer { id: spin; interval: 3000; onTriggered: { refresh.busy = false; rglyph.rotation = 0 } }
+      MouseArea {
+        id: rma
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: if (!refresh.busy) { refresh.busy = true; spin.restart(); card.reconnect() }
+      }
     }
   ]
 
