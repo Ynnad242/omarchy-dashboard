@@ -15,14 +15,48 @@ GlassCard {
   Item {
     anchors.fill: parent
 
-    Row {
+    // Three rings, as big as the card allows: in a row, a column, or two
+    // over one, whichever gives the biggest rings.
+    Item {
       id: rings
       width: parent.width
-      readonly property real d: Math.min((width - card.t.px(16)) / 3, card.t.px(78))
-      spacing: (width - d * 3) / 2
-      Ring { t: card.t; width: rings.d; height: rings.d; value: card.system.cpu || 0; label: "CPU"; color: card.t.text; progress: card.ease(card.progress * 1.3) }
-      Ring { t: card.t; width: rings.d; height: rings.d; value: card.system.ram || 0; label: "RAM"; color: card.t.text; progress: card.ease(card.progress * 1.3 - 0.1) }
-      Ring { t: card.t; width: rings.d; height: rings.d; value: card.system.disk || 0; label: "Disk"; color: card.t.text; progress: card.ease(card.progress * 1.3 - 0.2) }
+      height: parent.height - (card.mouse ? card.t.px(62) + card.t.px(12) : 0)
+      readonly property real g: card.t.px(14)
+      readonly property var fit: {
+        var w = width, h = height, g = rings.g, best = null
+        var opts = [{ cols: 3, rows: 1 }, { cols: 1, rows: 3 }, { cols: 2, rows: 2 }]
+        for (var i = 0; i < opts.length; i++) {
+          var o = opts[i], d = Math.min((w - g * (o.cols - 1)) / o.cols, (h - g * (o.rows - 1)) / o.rows)
+          if (!best || d > best.d + 0.5) best = { cols: o.cols, rows: o.rows, d: d }
+        }
+        best.d = Math.max(card.t.px(48), Math.min(best.d, card.t.px(170)))
+        return best
+      }
+      // Top-left of ring i, centered in the area; a lone last ring is centered too.
+      function pos(i) {
+        var f = fit, col = i % f.cols, row = Math.floor(i / f.cols)
+        var inRow = Math.min(f.cols, 3 - row * f.cols)
+        var rowW = inRow * f.d + (inRow - 1) * g
+        var totalH = f.rows * f.d + (f.rows - 1) * g
+        return { x: (width - rowW) / 2 + col * (f.d + g), y: (height - totalH) / 2 + row * (f.d + g) }
+      }
+      readonly property var data3: [
+        { v: card.system.cpu || 0, l: "CPU" }, { v: card.system.ram || 0, l: "RAM" }, { v: card.system.disk || 0, l: "Disk" }
+      ]
+      Repeater {
+        model: 3
+        Ring {
+          required property int index
+          readonly property var p: rings.pos(index)
+          t: card.t
+          x: p.x; y: p.y
+          width: rings.fit.d; height: width
+          value: rings.data3[index].v
+          label: rings.data3[index].l
+          color: card.t.text
+          progress: card.ease(card.progress * 1.3 - 0.1 * index)
+        }
+      }
     }
 
     // Hubless: the mouse, its battery and DPI.

@@ -12,7 +12,9 @@ Item {
   property real progress: 1
   property color color: t.accent
   property string label: ""
-  property real thickness: t.px(7)
+  // Text and stroke grow with the ring (78 px is the base size).
+  readonly property real grow: Math.max(1, Math.min(2.2, width / t.px(78)))
+  property real thickness: t.px(7) * Math.min(1.7, grow)
   Behavior on value { NumberAnimation { duration: 700; easing.type: Easing.OutQuart } }
   readonly property int cap: t.radiusSmall > 0 ? ShapePath.RoundCap : ShapePath.FlatCap
 
@@ -52,14 +54,14 @@ Item {
       t: ring.t
       anchors.horizontalCenter: parent.horizontalCenter
       text: Math.round(ring.sweep / 3.6) + "%"
-      size: 13
+      size: 13 * ring.grow
       font.weight: Font.Bold
     }
     JText {
       t: ring.t
       anchors.horizontalCenter: parent.horizontalCenter
       text: ring.label
-      size: 9
+      size: 9 * Math.min(1.6, ring.grow)
       color: ring.t.textFaint
     }
   }
