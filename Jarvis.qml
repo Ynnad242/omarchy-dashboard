@@ -1255,8 +1255,8 @@ Item {
           width: parent.width
           height: pageArea.lowerH
           // Shown cards share the row by weight, left to right.
-          readonly property var weights: ({ mail: 1.2, discord: 1.0, todo: 1.0, home: 1.05, system: 0.75 })
-          readonly property var keys: ["mail", "discord", "todo", "home", "system"].filter(function(k) { return root.shows(k) })
+          readonly property var weights: ({ mail: 1.2, discord: 1.0, todo: 1.0, home: 1.05, music: 1.0, system: 0.75 })
+          readonly property var keys: ["mail", "discord", "todo", "home", "music", "system"].filter(function(k) { return root.shows(k) })
           readonly property real unit: {
             var w = 0
             for (var i = 0; i < keys.length; i++) w += weights[keys[i]]
@@ -1329,6 +1329,17 @@ Item {
             shown: root.homeShown
             order: 10
           }
+          MusicCard {
+            t: theme
+            visible: root.shows("music") && opacity > 0.001
+            x: lower.xOf("music")
+            width: lower.wOf("music")
+            height: lower.height
+            demo: root.demo
+            live: root.onScreen && root.shows("music")
+            shown: root.homeShown
+            order: 11
+          }
           SystemCard {
             t: theme
             visible: root.shows("system") && opacity > 0.001
@@ -1337,7 +1348,7 @@ Item {
             height: lower.height
             system: root.demo ? root.dash.system : ({ cpu: root.sys.cpu, ram: root.sys.ram, disk: root.sys.disk, mouse: null })
             shown: root.homeShown
-            order: 11
+            order: 12
           }
         }
 

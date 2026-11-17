@@ -4,7 +4,7 @@
 
 A home screen for [Omarchy](https://omarchy.org) that lives on workspace 1:
 screen time, tasks, live stocks, weather, your email, Govee lamps and air
-purifier, Discord, an exercise coach that nudges you off doomscrolling, and a
+purifier, Discord, what's playing in Spotify, an exercise coach that nudges you off doomscrolling, and a
 bar along the bottom for asking Claude or Codex, by typing or by voice. It runs
 inside the Omarchy shell as the `ynnad.jarvis` plugin.
 

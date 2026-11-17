@@ -26,6 +26,7 @@ Item {
       { key: "discord", label: "Discord", hint: "Pings, DMs and your voice call" },
       { key: "todo", label: "To-do" },
       { key: "home", label: "Home: Govee lamps and purifier", hint: "Hide it if you don't have Govee devices" },
+      { key: "music", label: "Music", hint: "What's playing in Spotify, with play, pause, back and skip" },
       { key: "system", label: "System", hint: "CPU, memory and disk" } ] },
     { title: "PAGES", items: [
       { key: "stocksPage", label: "Stocks page", hint: "Also hides it from the side bar" } ] }
@@ -108,10 +109,10 @@ Item {
 
       readonly property var stats: ["stat-screen", "stat-tasks", "stat-inbox", "stat-stocks"].filter(function(k) { return pane.on(k) })
       readonly property var mids: ["screentime", "today"].filter(function(k) { return pane.on(k) })
-      readonly property var lows: ["mail", "discord", "todo", "home", "system"].filter(function(k) { return pane.on(k) })
-      readonly property var w: ({ mail: 1.2, discord: 1, todo: 1, home: 1.05, system: 0.75, screentime: 2, today: 1 })
+      readonly property var lows: ["mail", "discord", "todo", "home", "music", "system"].filter(function(k) { return pane.on(k) })
+      readonly property var w: ({ mail: 1.2, discord: 1, todo: 1, home: 1.05, music: 1, system: 0.75, screentime: 2, today: 1 })
       readonly property var names: ({ "stat-screen": "Screen", "stat-tasks": "Done", "stat-inbox": "Email", "stat-stocks": "Stocks",
-                                      screentime: "Screen time", today: "Today", mail: "Email", discord: "Discord", todo: "To-do", home: "Govee", system: "System" })
+                                      screentime: "Screen time", today: "Today", mail: "Email", discord: "Discord", todo: "To-do", home: "Govee", music: "Music", system: "System" })
       readonly property real headH: height * 0.1
       readonly property real chatH: height * 0.07
       readonly property real kpiH: stats.length ? height * 0.12 : 0
